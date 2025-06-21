@@ -211,6 +211,79 @@ cargo clippy             # Linting
 cargo fmt               # Formatting
 ```
 
+## Releases and Publishing
+
+### Creating a New Release
+
+Follow this workflow to create a new release:
+
+#### 1. Prepare the Release
+```bash
+# Update version in Cargo.toml
+# Example: version = "0.1.1" or "0.2.0"
+
+# Update CHANGELOG.md with new version and proper date
+## [0.1.1] - 2025-01-15
+### Added
+- New feature descriptions
+### Fixed  
+- Bug fix descriptions
+### Changed
+- Breaking change descriptions (for major versions)
+```
+
+#### 2. Test Everything Locally
+```bash
+make test          # Run all tests
+make clippy        # Check code quality  
+make fmt-check     # Check formatting
+cargo build --release  # Test release build
+```
+
+#### 3. Commit and Push Changes
+```bash
+git add -A
+git commit -m "Bump version to 0.1.1"
+git push
+```
+
+#### 4. Create and Push Tag
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+#### 5. Automatic Release Creation
+When you push the tag, GitHub Actions will automatically:
+- ✅ Build binaries for Windows, macOS, and Linux
+- ✅ Create GitHub release with binaries attached
+- ✅ Use CHANGELOG content as release notes
+- ✅ Run all CI checks
+
+#### 6. Publish to Crates.io (Optional)
+```bash
+# Test publish without actually doing it
+make publish-check
+
+# Actually publish to crates.io
+make publish
+```
+
+### Versioning Guidelines
+
+Follow [Semantic Versioning](https://semver.org/):
+- **Patch** (0.1.1): Bug fixes, no breaking changes
+- **Minor** (0.2.0): New features, no breaking changes  
+- **Major** (1.0.0): Breaking changes
+
+### Publishing Targets
+
+Your Makefile includes these publishing commands:
+- `make publish-check` - Dry run publish check (requires clean git)
+- `make publish` - Full publish workflow with CI checks and user confirmation
+- `make publish-check-dirty` - Development version allowing uncommitted changes
+- `make publish-dirty` - Development publish allowing uncommitted changes
+
 ## Contributing
 
 1. Fork the repository
