@@ -741,7 +741,7 @@ mod tests {
         assert_eq!(X25519_KYBER768_DRAFT, 0x6399);
     }
 
-        #[test]
+    #[test]
     fn test_tls_handshake_info_quantum_detection() {
         // Test quantum-secure group detection
         let info = TlsHandshakeInfo {
@@ -762,7 +762,7 @@ mod tests {
         assert_eq!(info.server_selected_group, Some(X25519));
     }
 
-        #[test]
+    #[test]
     fn test_tls_handshake_info_client_groups() {
         // Test adding supported groups
         let info = TlsHandshakeInfo {
@@ -777,7 +777,7 @@ mod tests {
         assert!(info.client_supported_groups.contains(&X25519));
     }
 
-        #[test]
+    #[test]
     fn test_tls_handshake_info_key_shares() {
         // Test client key shares
         let info = TlsHandshakeInfo {
@@ -796,7 +796,7 @@ mod tests {
         assert_eq!(info.server_key_share, Some(X25519_MLKEM768));
     }
 
-        #[test]
+    #[test]
     fn test_tls_version_negotiation() {
         // Test TLS 1.3 negotiation
         let info = TlsHandshakeInfo {
@@ -813,7 +813,7 @@ mod tests {
         assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_2));
     }
 
-        #[test]
+    #[test]
     fn test_cipher_suite_detection() {
         // Test TLS 1.3 cipher suites
         let info = TlsHandshakeInfo {
@@ -938,7 +938,7 @@ mod tests {
         assert_eq!(cloned.supports_quantum, original.supports_quantum);
     }
 
-        #[test]
+    #[test]
     fn test_comprehensive_quantum_detection() {
         // Scenario 1: Server selects quantum-secure group
         let info = TlsHandshakeInfo {
@@ -968,7 +968,7 @@ mod tests {
         assert!(!info.supports_quantum);
     }
 
-        #[test]
+    #[test]
     fn test_tls_version_compatibility() {
         // Test that quantum algorithms require TLS 1.3
         // TLS 1.3 with quantum algorithms should be supported
