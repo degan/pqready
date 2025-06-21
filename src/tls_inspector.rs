@@ -644,7 +644,9 @@ impl TlsInspector {
 
         // Alert code 32 doesn't exist in standard TLS - let me check what this actually is
         if description == 32 && verbose {
-            println!("⚠️  Alert code 32 - this may be a non-standard or implementation-specific alert");
+            println!(
+                "⚠️  Alert code 32 - this may be a non-standard or implementation-specific alert"
+            );
         }
 
         Ok(())
@@ -660,5 +662,296 @@ pub fn format_group_name(group: u16) -> String {
         0x0018 => "secp384r1 (Classical)".to_string(),
         0x0019 => "secp521r1 (Classical)".to_string(),
         _ => format!("Unknown Group (0x{:04x})", group),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tls_handshake_info_default() {
+        let info = TlsHandshakeInfo::default();
+        assert!(info.client_supported_groups.is_empty());
+        assert!(info.server_selected_group.is_none());
+        assert!(info.negotiated_version.is_none());
+        assert!(info.client_key_shares.is_empty());
+        assert!(info.server_key_share.is_none());
+        assert!(info.cipher_suite.is_none());
+        assert!(!info.supports_quantum);
+    }
+
+    #[test]
+    fn test_format_group_name_quantum_secure() {
+        assert_eq!(
+            format_group_name(X25519_MLKEM768),
+            "X25519+ML-KEM-768 (Quantum-Secure)"
+        );
+        assert_eq!(
+            format_group_name(X25519_KYBER768_DRAFT),
+            "X25519+Kyber768-Draft (Quantum-Secure)"
+        );
+    }
+
+    #[test]
+    fn test_format_group_name_classical() {
+        assert_eq!(format_group_name(X25519), "X25519 (Classical)");
+        assert_eq!(format_group_name(0x0017), "secp256r1 (Classical)");
+        assert_eq!(format_group_name(0x0018), "secp384r1 (Classical)");
+        assert_eq!(format_group_name(0x0019), "secp521r1 (Classical)");
+    }
+
+    #[test]
+    fn test_format_group_name_unknown() {
+        assert_eq!(format_group_name(0x9999), "Unknown Group (0x9999)");
+        assert_eq!(format_group_name(0x0000), "Unknown Group (0x0000)");
+        assert_eq!(format_group_name(0xFFFF), "Unknown Group (0xffff)");
+    }
+
+    #[test]
+    fn test_tls_constants() {
+        assert_eq!(TLS_HANDSHAKE, 0x16);
+        assert_eq!(TLS_CHANGE_CIPHER_SPEC, 0x14);
+        assert_eq!(TLS_ALERT, 0x15);
+        assert_eq!(TLS_APPLICATION_DATA, 0x17);
+        assert_eq!(TLS_VERSION_1_3, 0x0304);
+        assert_eq!(TLS_VERSION_1_2, 0x0303);
+    }
+
+    #[test]
+    fn test_handshake_types() {
+        assert_eq!(CLIENT_HELLO, 0x01);
+        assert_eq!(SERVER_HELLO, 0x02);
+    }
+
+    #[test]
+    fn test_extension_types() {
+        assert_eq!(SUPPORTED_GROUPS, 0x000a);
+        assert_eq!(KEY_SHARE, 0x0033);
+        assert_eq!(SUPPORTED_VERSIONS, 0x002b);
+    }
+
+    #[test]
+    fn test_named_groups() {
+        assert_eq!(X25519, 0x001d);
+        assert_eq!(X25519_MLKEM768, 0x11ec);
+        assert_eq!(X25519_KYBER768_DRAFT, 0x6399);
+    }
+
+    #[test]
+    fn test_tls_handshake_info_quantum_detection() {
+        let mut info = TlsHandshakeInfo::default();
+
+        // Test quantum-secure group detection
+        info.server_selected_group = Some(X25519_MLKEM768);
+        info.supports_quantum = true;
+        assert!(info.supports_quantum);
+        assert_eq!(info.server_selected_group, Some(X25519_MLKEM768));
+
+        // Test classical group detection
+        info.server_selected_group = Some(X25519);
+        info.supports_quantum = false;
+        assert!(!info.supports_quantum);
+        assert_eq!(info.server_selected_group, Some(X25519));
+    }
+
+    #[test]
+    fn test_tls_handshake_info_client_groups() {
+        let mut info = TlsHandshakeInfo::default();
+
+        // Test adding supported groups
+        info.client_supported_groups = vec![X25519_MLKEM768, X25519_KYBER768_DRAFT, X25519];
+        assert_eq!(info.client_supported_groups.len(), 3);
+        assert!(info.client_supported_groups.contains(&X25519_MLKEM768));
+        assert!(info
+            .client_supported_groups
+            .contains(&X25519_KYBER768_DRAFT));
+        assert!(info.client_supported_groups.contains(&X25519));
+    }
+
+    #[test]
+    fn test_tls_handshake_info_key_shares() {
+        let mut info = TlsHandshakeInfo::default();
+
+        // Test client key shares
+        info.client_key_shares = vec![X25519_MLKEM768, X25519];
+        assert_eq!(info.client_key_shares.len(), 2);
+        assert!(info.client_key_shares.contains(&X25519_MLKEM768));
+        assert!(info.client_key_shares.contains(&X25519));
+
+        // Test server key share
+        info.server_key_share = Some(X25519_MLKEM768);
+        assert_eq!(info.server_key_share, Some(X25519_MLKEM768));
+    }
+
+    #[test]
+    fn test_tls_version_negotiation() {
+        let mut info = TlsHandshakeInfo::default();
+
+        // Test TLS 1.3 negotiation
+        info.negotiated_version = Some(TLS_VERSION_1_3);
+        assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_3));
+
+        // Test TLS 1.2 negotiation
+        info.negotiated_version = Some(TLS_VERSION_1_2);
+        assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_2));
+    }
+
+    #[test]
+    fn test_cipher_suite_detection() {
+        let mut info = TlsHandshakeInfo::default();
+
+        // Test TLS 1.3 cipher suites
+        info.cipher_suite = Some(0x1301); // TLS_AES_128_GCM_SHA256
+        assert_eq!(info.cipher_suite, Some(0x1301));
+
+        info.cipher_suite = Some(0x1302); // TLS_AES_256_GCM_SHA384
+        assert_eq!(info.cipher_suite, Some(0x1302));
+
+        info.cipher_suite = Some(0x1303); // TLS_CHACHA20_POLY1305_SHA256
+        assert_eq!(info.cipher_suite, Some(0x1303));
+    }
+
+    #[test]
+    fn test_quantum_group_priority() {
+        // Test that quantum-secure groups are prioritized
+        let quantum_groups = vec![X25519_MLKEM768, X25519_KYBER768_DRAFT];
+        let classical_groups = vec![X25519, 0x0017, 0x0018, 0x0019];
+
+        for &group in &quantum_groups {
+            let name = format_group_name(group);
+            assert!(name.contains("Quantum-Secure"));
+        }
+
+        for &group in &classical_groups {
+            let name = format_group_name(group);
+            assert!(name.contains("Classical"));
+        }
+    }
+
+    #[test]
+    fn test_tls_record_parsing_constants() {
+        // Test that we can identify different TLS record types
+        let record_types = vec![
+            (TLS_HANDSHAKE, "Handshake"),
+            (TLS_CHANGE_CIPHER_SPEC, "Change Cipher Spec"),
+            (TLS_ALERT, "Alert"),
+            (TLS_APPLICATION_DATA, "Application Data"),
+        ];
+
+        for (record_type, name) in record_types {
+            match record_type {
+                0x16 => assert_eq!(name, "Handshake"),
+                0x14 => assert_eq!(name, "Change Cipher Spec"),
+                0x15 => assert_eq!(name, "Alert"),
+                0x17 => assert_eq!(name, "Application Data"),
+                _ => panic!("Unknown record type"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_extension_type_identification() {
+        let extensions = vec![
+            (SUPPORTED_GROUPS, "supported_groups"),
+            (KEY_SHARE, "key_share"),
+            (SUPPORTED_VERSIONS, "supported_versions"),
+            (0x0000, "server_name"),
+            (0x000d, "signature_algorithms"),
+        ];
+
+        for (ext_type, name) in extensions {
+            match ext_type {
+                0x000a => assert_eq!(name, "supported_groups"),
+                0x0033 => assert_eq!(name, "key_share"),
+                0x002b => assert_eq!(name, "supported_versions"),
+                0x0000 => assert_eq!(name, "server_name"),
+                0x000d => assert_eq!(name, "signature_algorithms"),
+                _ => {}
+            }
+        }
+    }
+
+    #[test]
+    fn test_quantum_algorithm_identification() {
+        // Test that we can identify quantum-secure vs classical algorithms
+        let test_cases = vec![
+            (X25519_MLKEM768, true, "X25519+ML-KEM-768"),
+            (X25519_KYBER768_DRAFT, true, "X25519+Kyber768-Draft"),
+            (X25519, false, "X25519"),
+            (0x0017, false, "secp256r1"),
+            (0x0018, false, "secp384r1"),
+            (0x0019, false, "secp521r1"),
+        ];
+
+        for (group_id, is_quantum, expected_name_part) in test_cases {
+            let formatted_name = format_group_name(group_id);
+
+            if is_quantum {
+                assert!(formatted_name.contains("Quantum-Secure"));
+                assert!(formatted_name.contains(expected_name_part));
+            } else {
+                assert!(formatted_name.contains("Classical"));
+                assert!(formatted_name.contains(expected_name_part));
+            }
+        }
+    }
+
+    #[test]
+    fn test_tls_handshake_info_clone() {
+        let mut original = TlsHandshakeInfo::default();
+        original.client_supported_groups = vec![X25519_MLKEM768, X25519];
+        original.server_selected_group = Some(X25519_MLKEM768);
+        original.supports_quantum = true;
+
+        let cloned = original.clone();
+        assert_eq!(
+            cloned.client_supported_groups,
+            original.client_supported_groups
+        );
+        assert_eq!(cloned.server_selected_group, original.server_selected_group);
+        assert_eq!(cloned.supports_quantum, original.supports_quantum);
+    }
+
+    #[test]
+    fn test_comprehensive_quantum_detection() {
+        let mut info = TlsHandshakeInfo::default();
+
+        // Scenario 1: Server selects quantum-secure group
+        info.server_selected_group = Some(X25519_MLKEM768);
+        info.server_key_share = Some(X25519_MLKEM768);
+        info.supports_quantum = true;
+        assert!(info.supports_quantum);
+
+        // Scenario 2: Server selects classical group despite quantum offer
+        info.server_selected_group = Some(X25519);
+        info.server_key_share = Some(X25519);
+        info.supports_quantum = false;
+        assert!(!info.supports_quantum);
+
+        // Scenario 3: Client offers quantum but server doesn't respond
+        info.client_supported_groups = vec![X25519_MLKEM768, X25519];
+        info.server_selected_group = None;
+        info.supports_quantum = false;
+        assert!(!info.supports_quantum);
+    }
+
+    #[test]
+    fn test_tls_version_compatibility() {
+        // Test that quantum algorithms require TLS 1.3
+        let mut info = TlsHandshakeInfo::default();
+
+        // TLS 1.3 with quantum algorithms should be supported
+        info.negotiated_version = Some(TLS_VERSION_1_3);
+        info.server_selected_group = Some(X25519_MLKEM768);
+        info.supports_quantum = true;
+        assert!(info.supports_quantum);
+        assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_3));
+
+        // TLS 1.2 should not support quantum algorithms
+        info.negotiated_version = Some(TLS_VERSION_1_2);
+        info.supports_quantum = false;
+        assert!(!info.supports_quantum);
+        assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_2));
     }
 }

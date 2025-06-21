@@ -1,6 +1,6 @@
 # pqready - Quantum Security Scanner
 
-A cross-platform CLI tool to test HTTPS servers for quantum-secure encryption support, specifically the `X25519MLKEM768` key exchange algorithm introduced in Apple's latest operating systems.
+A cross-platform CLI tool to test TLS/HTTPS servers for quantum-secure encryption support, specifically the `X25519MLKEM768` key exchange algorithm introduced in Apple's latest operating systems.
 
 ## Overview
 
@@ -232,5 +232,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Acknowledgments
 
-- Apple Inc. for the quantum-secure encryption specifications
+- Apple Inc. for the quantum-secure encryption specifications, even though as of first release apple.com does not appear to support.
 - The post-quantum cryptography research community
+
+
+## TODO
+
+1. Batch URLs from file

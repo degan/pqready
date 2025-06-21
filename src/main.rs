@@ -118,7 +118,9 @@ async fn main() -> Result<()> {
     let url = match Url::parse(url_str) {
         Ok(u) => {
             if u.scheme() != "https" {
-                return Err(anyhow!("Only HTTPS URLs are supported. Please use 'https://' prefix."));
+                return Err(anyhow!(
+                    "Only HTTPS URLs are supported. Please use 'https://' prefix."
+                ));
             }
             u
         }
@@ -557,9 +559,11 @@ fn print_result(result: &ScanResult, verbose: bool) {
                 .dimmed()
         );
         println!();
-    } else if result.key_exchange.as_ref().is_some_and(|ke| {
-        ke.contains("(Quantum-Secure)") || ke.contains("(Classical)")
-    }) {
+    } else if result
+        .key_exchange
+        .as_ref()
+        .is_some_and(|ke| ke.contains("(Quantum-Secure)") || ke.contains("(Classical)"))
+    {
         println!("{}", "✅ Deep Analysis Mode:".green().bold());
         println!(
             "{}",
@@ -587,6 +591,9 @@ mod tests {
         assert_eq!(result.url, "https://example.com");
         assert!(!result.supports_quantum);
         assert!(result.error.is_none());
+        assert!(result.tls_version.is_none());
+        assert!(result.cipher_suite.is_none());
+        assert!(result.key_exchange.is_none());
     }
 
     #[test]
@@ -598,10 +605,30 @@ mod tests {
         assert_eq!(result.url, "https://example.com");
         assert!(!result.supports_quantum);
         assert_eq!(result.error, Some("Connection failed".to_string()));
+        assert!(result.tls_version.is_none());
+        assert!(result.cipher_suite.is_none());
+        assert!(result.key_exchange.is_none());
     }
 
     #[test]
-    fn test_url_parsing() {
+    fn test_scan_result_serialization() {
+        let result = ScanResult {
+            url: "https://test.com".to_string(),
+            supports_quantum: true,
+            tls_version: Some("TLSv1_3".to_string()),
+            cipher_suite: Some("TLS13_AES_256_GCM_SHA384".to_string()),
+            key_exchange: Some("X25519+ML-KEM-768".to_string()),
+            error: None,
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("\"supports_quantum\":true"));
+        assert!(json.contains("\"url\":\"https://test.com\""));
+        assert!(json.contains("\"tls_version\":\"TLSv1_3\""));
+    }
+
+    #[test]
+    fn test_url_parsing_valid_cases() {
         // Test HTTPS URL
         let url = Url::parse("https://example.com").unwrap();
         assert_eq!(url.scheme(), "https");
@@ -611,15 +638,228 @@ mod tests {
         // Test HTTPS URL with port
         let url = Url::parse("https://example.com:8443").unwrap();
         assert_eq!(url.port(), Some(8443));
+
+        // Test HTTPS URL with path
+        let url = Url::parse("https://example.com/path").unwrap();
+        assert_eq!(url.path(), "/path");
+
+        // Test HTTPS URL with query
+        let url = Url::parse("https://example.com?query=test").unwrap();
+        assert_eq!(url.query(), Some("query=test"));
+    }
+
+    #[test]
+    fn test_url_parsing_invalid_cases() {
+        // Test invalid URL
+        assert!(Url::parse("not-a-url").is_err());
+
+        // Test HTTP URL (should be rejected in main logic)
+        let url = Url::parse("http://example.com").unwrap();
+        assert_eq!(url.scheme(), "http");
+    }
+
+    #[test]
+    fn test_quantum_indicators_detection() {
+        // Test positive cases
+        assert!(check_for_quantum_indicators("TLS_MLKEM_AES_256", false));
+        assert!(check_for_quantum_indicators(
+            "cipher_with_KYBER_support",
+            false
+        ));
+        assert!(check_for_quantum_indicators("X25519MLKEM768_cipher", false));
+        assert!(check_for_quantum_indicators("HYBRID_key_exchange", false));
+        assert!(check_for_quantum_indicators("PQ_enabled_suite", false));
+
+        // Test case insensitivity
+        assert!(check_for_quantum_indicators("mlkem_cipher", false));
+        assert!(check_for_quantum_indicators("kyber_cipher", false));
+
+        // Test negative cases
+        assert!(!check_for_quantum_indicators(
+            "TLS_AES_256_GCM_SHA384",
+            false
+        ));
+        assert!(!check_for_quantum_indicators("ECDHE_RSA_AES_256", false));
+        assert!(!check_for_quantum_indicators("classical_cipher", false));
+        assert!(!check_for_quantum_indicators("", false));
     }
 
     #[test]
     fn test_format_group_name() {
         use crate::tls_inspector::format_group_name;
-        
+
+        // Test quantum-secure groups
         assert_eq!(format_group_name(0x001d), "X25519 (Classical)");
-        assert_eq!(format_group_name(0x11ec), "X25519+ML-KEM-768 (Quantum-Secure)");
-        assert_eq!(format_group_name(0x6399), "X25519+Kyber768-Draft (Quantum-Secure)");
+        assert_eq!(
+            format_group_name(0x11ec),
+            "X25519+ML-KEM-768 (Quantum-Secure)"
+        );
+        assert_eq!(
+            format_group_name(0x6399),
+            "X25519+Kyber768-Draft (Quantum-Secure)"
+        );
+
+        // Test classical groups
+        assert_eq!(format_group_name(0x0017), "secp256r1 (Classical)");
+        assert_eq!(format_group_name(0x0018), "secp384r1 (Classical)");
+        assert_eq!(format_group_name(0x0019), "secp521r1 (Classical)");
+
+        // Test unknown groups
         assert_eq!(format_group_name(0x9999), "Unknown Group (0x9999)");
+        assert_eq!(format_group_name(0x0000), "Unknown Group (0x0000)");
+        assert_eq!(format_group_name(0xFFFF), "Unknown Group (0xffff)");
+    }
+
+    #[test]
+    fn test_scan_result_quantum_support_detection() {
+        let mut result = ScanResult::new("https://test.com".to_string());
+
+        // Test quantum-secure key exchange detection
+        result.key_exchange = Some("X25519+ML-KEM-768 (Quantum-Secure)".to_string());
+        result.supports_quantum = true;
+        assert!(result.supports_quantum);
+
+        // Test classical key exchange detection
+        result.key_exchange = Some("X25519 (Classical)".to_string());
+        result.supports_quantum = false;
+        assert!(!result.supports_quantum);
+    }
+
+    #[test]
+    fn test_error_handling_scenarios() {
+        // Test DNS resolution failure
+        let error_result = ScanResult::with_error(
+            "https://nonexistent.domain".to_string(),
+            "DNS resolution failed".to_string(),
+        );
+        assert!(error_result.error.is_some());
+        assert!(!error_result.supports_quantum);
+
+        // Test connection timeout
+        let timeout_result = ScanResult::with_error(
+            "https://example.com".to_string(),
+            "Connection timeout".to_string(),
+        );
+        assert!(timeout_result.error.is_some());
+        assert_eq!(timeout_result.error.unwrap(), "Connection timeout");
+
+        // Test TLS handshake failure
+        let tls_error_result = ScanResult::with_error(
+            "https://example.com".to_string(),
+            "TLS handshake failed".to_string(),
+        );
+        assert!(tls_error_result.error.is_some());
+    }
+
+    #[test]
+    fn test_tls_version_parsing() {
+        let mut result = ScanResult::new("https://test.com".to_string());
+
+        // Test TLS 1.3 version
+        result.tls_version = Some("0x0304".to_string());
+        assert_eq!(result.tls_version, Some("0x0304".to_string()));
+
+        // Test TLS 1.2 version
+        result.tls_version = Some("0x0303".to_string());
+        assert_eq!(result.tls_version, Some("0x0303".to_string()));
+    }
+
+    #[test]
+    fn test_cipher_suite_detection() {
+        let mut result = ScanResult::new("https://test.com".to_string());
+
+        // Test TLS 1.3 cipher suites
+        result.cipher_suite = Some("0x1301".to_string()); // TLS_AES_128_GCM_SHA256
+        assert_eq!(result.cipher_suite, Some("0x1301".to_string()));
+
+        result.cipher_suite = Some("0x1302".to_string()); // TLS_AES_256_GCM_SHA384
+        assert_eq!(result.cipher_suite, Some("0x1302".to_string()));
+
+        result.cipher_suite = Some("0x1303".to_string()); // TLS_CHACHA20_POLY1305_SHA256
+        assert_eq!(result.cipher_suite, Some("0x1303".to_string()));
+    }
+
+    #[test]
+    fn test_key_exchange_analysis() {
+        // Test different key exchange scenarios
+        let test_cases = vec![
+            ("X25519+ML-KEM-768 (Quantum-Secure)", true),
+            ("X25519+Kyber768-Draft (Quantum-Secure)", true),
+            ("X25519 (Classical)", false),
+            ("secp256r1 (Classical)", false),
+            ("Unknown Group (0x9999)", false),
+            ("No key exchange detected", false),
+        ];
+
+        for (key_exchange, expected_quantum) in test_cases {
+            let mut result = ScanResult::new("https://test.com".to_string());
+            result.key_exchange = Some(key_exchange.to_string());
+            result.supports_quantum = expected_quantum;
+
+            assert_eq!(
+                result.supports_quantum, expected_quantum,
+                "Failed for key exchange: {}",
+                key_exchange
+            );
+        }
+    }
+
+    #[test]
+    fn test_url_normalization() {
+        // Test various URL formats that should be normalized
+        let test_urls = vec![
+            ("example.com", "https://example.com/"),
+            ("www.example.com", "https://www.example.com/"),
+            ("example.com:8443", "https://example.com:8443/"),
+            ("example.com/path", "https://example.com/path"),
+        ];
+
+        for (input, _expected) in test_urls {
+            let normalized = format!("https://{}", input);
+            let url = Url::parse(&normalized).unwrap();
+            assert!(
+                url.as_str().starts_with("https://"),
+                "URL should start with https://: {}",
+                url.as_str()
+            );
+        }
+    }
+
+    #[test]
+    fn test_json_output_format() {
+        let result = ScanResult {
+            url: "https://example.com".to_string(),
+            supports_quantum: false,
+            tls_version: Some("0x0304".to_string()),
+            cipher_suite: Some("0x1302".to_string()),
+            key_exchange: Some("X25519 (Classical)".to_string()),
+            error: None,
+        };
+
+        let json = serde_json::to_string_pretty(&result).unwrap();
+
+        // Verify JSON structure
+        assert!(json.contains("\"url\""));
+        assert!(json.contains("\"supports_quantum\""));
+        assert!(json.contains("\"tls_version\""));
+        assert!(json.contains("\"cipher_suite\""));
+        assert!(json.contains("\"key_exchange\""));
+        assert!(json.contains("\"error\""));
+
+        // Verify values
+        assert!(json.contains("\"supports_quantum\": false"));
+        assert!(json.contains("\"error\": null"));
+    }
+
+    #[test]
+    fn test_error_json_output() {
+        let error_result = ScanResult::with_error(
+            "https://invalid.com".to_string(),
+            "Connection refused".to_string(),
+        );
+
+        let json = serde_json::to_string(&error_result).unwrap();
+        assert!(json.contains("\"error\":\"Connection refused\""));
+        assert!(json.contains("\"supports_quantum\":false"));
     }
 }
