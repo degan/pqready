@@ -1,3 +1,6 @@
+// TLS Inspector for quantum-secure encryption detection
+// This module handles the low-level TLS handshake analysis
+
 use anyhow::{anyhow, Result};
 use std::io::{Read, Write};
 use std::net::TcpStream;
