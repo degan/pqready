@@ -25,7 +25,7 @@ const X25519: u16 = 0x001d;
 const X25519_MLKEM768: u16 = 0x11ec; // X25519+ML-KEM-768 (recommended by Cloudflare)
 const X25519_KYBER768_DRAFT: u16 = 0x6399; // X25519Kyber768Draft00 (current Cloudflare implementation)
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct TlsHandshakeInfo {
     pub client_supported_groups: Vec<u16>,
     pub server_selected_group: Option<u16>,
@@ -34,20 +34,6 @@ pub struct TlsHandshakeInfo {
     pub server_key_share: Option<u16>,
     pub cipher_suite: Option<u16>,
     pub supports_quantum: bool,
-}
-
-impl Default for TlsHandshakeInfo {
-    fn default() -> Self {
-        Self {
-            client_supported_groups: Vec::new(),
-            server_selected_group: None,
-            negotiated_version: None,
-            client_key_shares: Vec::new(),
-            server_key_share: None,
-            cipher_suite: None,
-            supports_quantum: false,
-        }
-    }
 }
 
 pub struct TlsInspector {
@@ -265,7 +251,7 @@ impl TlsInspector {
         // X25519 key share (classical fallback)
         key_shares.extend_from_slice(&X25519.to_be_bytes());
         key_shares.extend_from_slice(&32u16.to_be_bytes()); // X25519 public key size
-        key_shares.extend_from_slice(&vec![0x41; 32]);
+        key_shares.extend_from_slice(&[0x41; 32]);
 
         extensions.extend_from_slice(&((key_shares.len() + 2) as u16).to_be_bytes()); // Extension length
         extensions.extend_from_slice(&(key_shares.len() as u16).to_be_bytes()); // Key shares length
@@ -275,7 +261,7 @@ impl TlsInspector {
     fn add_signature_algorithms_extension(&self, extensions: &mut Vec<u8>) {
         extensions.extend_from_slice(&0x000du16.to_be_bytes()); // Signature algorithms extension
 
-        let sig_algs = vec![
+        let sig_algs = [
             0x0804, // rsa_pss_rsae_sha256
             0x0805, // rsa_pss_rsae_sha384
             0x0806, // rsa_pss_rsae_sha512
@@ -657,10 +643,8 @@ impl TlsInspector {
         }
 
         // Alert code 32 doesn't exist in standard TLS - let me check what this actually is
-        if description == 32 {
-            if verbose {
-                println!("⚠️  Alert code 32 - this may be a non-standard or implementation-specific alert");
-            }
+        if description == 32 && verbose {
+            println!("⚠️  Alert code 32 - this may be a non-standard or implementation-specific alert");
         }
 
         Ok(())

@@ -9,13 +9,20 @@ use url::Url;
 
 mod tls_inspector;
 
+/// Represents the result of a quantum security scan
 #[derive(Debug, serde::Serialize)]
 struct ScanResult {
+    /// The URL that was tested
     url: String,
+    /// Whether the server supports quantum-secure encryption
     supports_quantum: bool,
+    /// The TLS version negotiated
     tls_version: Option<String>,
+    /// The cipher suite used
     cipher_suite: Option<String>,
+    /// The key exchange algorithm used
     key_exchange: Option<String>,
+    /// Any error that occurred during scanning
     error: Option<String>,
 }
 
@@ -46,10 +53,11 @@ impl ScanResult {
 #[tokio::main]
 async fn main() -> Result<()> {
     let matches = Command::new("pqready")
-        .version("0.1.0")
+        .version(env!("CARGO_PKG_VERSION"))
         .author("Your Name <your.email@example.com>")
         .about("A cross-platform CLI tool to test for quantum-secure encryption support")
         .long_about("Tests HTTPS servers for quantum-secure encryption support (X25519MLKEM768 key exchange).\n\nBased on Apple's quantum-secure encryption specifications from iOS 26, iPadOS 26, macOS Tahoe 26 and visionOS 26.\n\nDeep TLS handshake analysis is enabled by default for accurate quantum detection. Use --regular for high-level library analysis (limited detection capabilities).")
+        .after_help("EXAMPLES:\n    pqready https://example.com\n    pqready -v https://github.com\n    pqready -j https://google.com\n    pqready --regular -v https://cloudflare.com")
         .arg(
             Arg::new("url")
                 .help("The HTTPS URL to test")
@@ -110,14 +118,17 @@ async fn main() -> Result<()> {
     let url = match Url::parse(url_str) {
         Ok(u) => {
             if u.scheme() != "https" {
-                return Err(anyhow!("Only HTTPS URLs are supported"));
+                return Err(anyhow!("Only HTTPS URLs are supported. Please use 'https://' prefix."));
             }
             u
         }
         Err(_) => {
             // Try adding https:// prefix
             let with_https = format!("https://{}", url_str);
-            Url::parse(&with_https).map_err(|_| anyhow!("Invalid URL format"))?
+            match Url::parse(&with_https) {
+                Ok(u) => u,
+                Err(e) => return Err(anyhow!("Invalid URL format '{}': {}", url_str, e)),
+            }
         }
     };
 
@@ -529,7 +540,7 @@ fn print_result(result: &ScanResult, verbose: bool) {
     if result
         .key_exchange
         .as_ref()
-        .map_or(false, |ke| ke.contains("Unknown from cipher"))
+        .is_some_and(|ke| ke.contains("Unknown from cipher"))
     {
         println!("{}", "⚠️  Detection Limitations:".yellow().bold());
         println!(
@@ -546,7 +557,7 @@ fn print_result(result: &ScanResult, verbose: bool) {
                 .dimmed()
         );
         println!();
-    } else if result.key_exchange.as_ref().map_or(false, |ke| {
+    } else if result.key_exchange.as_ref().is_some_and(|ke| {
         ke.contains("(Quantum-Secure)") || ke.contains("(Classical)")
     }) {
         println!("{}", "✅ Deep Analysis Mode:".green().bold());
@@ -563,5 +574,52 @@ fn print_result(result: &ScanResult, verbose: bool) {
             "   • Results show true negotiated algorithms, not library interpretations".dimmed()
         );
         println!();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_scan_result_creation() {
+        let result = ScanResult::new("https://example.com".to_string());
+        assert_eq!(result.url, "https://example.com");
+        assert!(!result.supports_quantum);
+        assert!(result.error.is_none());
+    }
+
+    #[test]
+    fn test_scan_result_with_error() {
+        let result = ScanResult::with_error(
+            "https://example.com".to_string(),
+            "Connection failed".to_string(),
+        );
+        assert_eq!(result.url, "https://example.com");
+        assert!(!result.supports_quantum);
+        assert_eq!(result.error, Some("Connection failed".to_string()));
+    }
+
+    #[test]
+    fn test_url_parsing() {
+        // Test HTTPS URL
+        let url = Url::parse("https://example.com").unwrap();
+        assert_eq!(url.scheme(), "https");
+        assert_eq!(url.host_str(), Some("example.com"));
+        assert_eq!(url.port(), None);
+
+        // Test HTTPS URL with port
+        let url = Url::parse("https://example.com:8443").unwrap();
+        assert_eq!(url.port(), Some(8443));
+    }
+
+    #[test]
+    fn test_format_group_name() {
+        use crate::tls_inspector::format_group_name;
+        
+        assert_eq!(format_group_name(0x001d), "X25519 (Classical)");
+        assert_eq!(format_group_name(0x11ec), "X25519+ML-KEM-768 (Quantum-Secure)");
+        assert_eq!(format_group_name(0x6399), "X25519+Kyber768-Draft (Quantum-Secure)");
+        assert_eq!(format_group_name(0x9999), "Unknown Group (0x9999)");
     }
 }

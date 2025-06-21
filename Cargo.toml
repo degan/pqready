@@ -2,9 +2,14 @@
 name = "pqready"
 version = "0.1.0"
 edition = "2021"
-description = "A cross-platform CLI tool to test for quantum-secure encryption support"
-authors = ["Your Name <your.email@example.com>"]
+description = "A cross-platform CLI tool to test for quantum-secure TLS/HTTPS encryption support"
+authors = ["Devin Egan <github@devinegan.com>"]
 license = "MIT"
+repository = "https://github.com/degan/pqready"
+homepage = "https://github.com/degan/pqready"
+documentation = "https://docs.rs/pqready"
+keywords = ["quantum", "cryptography", "tls", "security", "post-quantum"]
+categories = ["command-line-utilities", "cryptography", "network-programming"]
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }

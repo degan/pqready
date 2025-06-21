@@ -127,6 +127,35 @@ size: release
 	@ls -lh target/release/$(BINARY_NAME)
 	@file target/release/$(BINARY_NAME)
 
+# Publishing targets
+.PHONY: publish-check
+publish-check:
+	@echo "🔍 Checking if ready to publish..."
+	cargo publish --dry-run
+
+.PHONY: publish-check-dirty
+publish-check-dirty:
+	@echo "🔍 Checking if ready to publish (allowing dirty git)..."
+	cargo publish --dry-run --allow-dirty
+
+.PHONY: publish
+publish: ci publish-check
+	@echo "📦 Publishing $(PROJECT_NAME) to crates.io..."
+	@echo "⚠️  This will publish version $(VERSION) to crates.io!"
+	@echo "⚠️  Make sure all changes are committed to git first!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read
+	cargo publish
+
+.PHONY: publish-dirty
+publish-dirty: ci publish-check-dirty
+	@echo "📦 Publishing $(PROJECT_NAME) to crates.io (dirty git allowed)..."
+	@echo "⚠️  This will publish version $(VERSION) to crates.io!"
+	@echo "⚠️  WARNING: Publishing with uncommitted changes!"
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read
+	cargo publish --allow-dirty
+
 # Development workflow
 .PHONY: dev
 dev: fmt clippy test build
@@ -186,6 +215,10 @@ help:
 	@echo "  doc-open      Build and open documentation"
 	@echo "  strip         Strip release binary (reduce size)"
 	@echo "  size          Show binary size information"
+	@echo "  publish-check Check if package is ready to publish (dry-run)"
+	@echo "  publish       Publish to crates.io (runs CI checks first)"
+	@echo "  publish-check-dirty Check if ready to publish (allow dirty git)"
+	@echo "  publish-dirty Publish to crates.io (allow dirty git, for development)"
 	@echo "  dev           Development workflow (fmt + clippy + test + build)"
 	@echo "  ci            CI workflow (fmt-check + clippy + test + build)"
 	@echo "  demo          Run demo with multiple URLs"
@@ -198,6 +231,8 @@ help:
 	@echo "  make demo                     # Run demo"
 	@echo "  make demo-deep                # Run deep analysis demo"
 	@echo "  make dev                      # Full development check"
+	@echo "  make publish-check            # Check if ready to publish"
+	@echo "  make publish                  # Publish to crates.io"
 	@echo ""
 	@echo "Direct binary usage:"
 	@echo "  ./target/release/pqready https://example.com"
