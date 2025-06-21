@@ -738,29 +738,34 @@ mod tests {
         assert_eq!(X25519_KYBER768_DRAFT, 0x6399);
     }
 
-    #[test]
+        #[test]
     fn test_tls_handshake_info_quantum_detection() {
-        let mut info = TlsHandshakeInfo::default();
-
         // Test quantum-secure group detection
-        info.server_selected_group = Some(X25519_MLKEM768);
-        info.supports_quantum = true;
+        let info = TlsHandshakeInfo {
+            server_selected_group: Some(X25519_MLKEM768),
+            supports_quantum: true,
+            ..Default::default()
+        };
         assert!(info.supports_quantum);
         assert_eq!(info.server_selected_group, Some(X25519_MLKEM768));
 
         // Test classical group detection
-        info.server_selected_group = Some(X25519);
-        info.supports_quantum = false;
+        let info = TlsHandshakeInfo {
+            server_selected_group: Some(X25519),
+            supports_quantum: false,
+            ..Default::default()
+        };
         assert!(!info.supports_quantum);
         assert_eq!(info.server_selected_group, Some(X25519));
     }
 
-    #[test]
+        #[test]
     fn test_tls_handshake_info_client_groups() {
-        let mut info = TlsHandshakeInfo::default();
-
         // Test adding supported groups
-        info.client_supported_groups = vec![X25519_MLKEM768, X25519_KYBER768_DRAFT, X25519];
+        let info = TlsHandshakeInfo {
+            client_supported_groups: vec![X25519_MLKEM768, X25519_KYBER768_DRAFT, X25519],
+            ..Default::default()
+        };
         assert_eq!(info.client_supported_groups.len(), 3);
         assert!(info.client_supported_groups.contains(&X25519_MLKEM768));
         assert!(info
@@ -769,46 +774,61 @@ mod tests {
         assert!(info.client_supported_groups.contains(&X25519));
     }
 
-    #[test]
+        #[test]
     fn test_tls_handshake_info_key_shares() {
-        let mut info = TlsHandshakeInfo::default();
-
         // Test client key shares
-        info.client_key_shares = vec![X25519_MLKEM768, X25519];
+        let info = TlsHandshakeInfo {
+            client_key_shares: vec![X25519_MLKEM768, X25519],
+            ..Default::default()
+        };
         assert_eq!(info.client_key_shares.len(), 2);
         assert!(info.client_key_shares.contains(&X25519_MLKEM768));
         assert!(info.client_key_shares.contains(&X25519));
 
         // Test server key share
-        info.server_key_share = Some(X25519_MLKEM768);
+        let info = TlsHandshakeInfo {
+            server_key_share: Some(X25519_MLKEM768),
+            ..Default::default()
+        };
         assert_eq!(info.server_key_share, Some(X25519_MLKEM768));
     }
 
-    #[test]
+        #[test]
     fn test_tls_version_negotiation() {
-        let mut info = TlsHandshakeInfo::default();
-
         // Test TLS 1.3 negotiation
-        info.negotiated_version = Some(TLS_VERSION_1_3);
+        let info = TlsHandshakeInfo {
+            negotiated_version: Some(TLS_VERSION_1_3),
+            ..Default::default()
+        };
         assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_3));
 
         // Test TLS 1.2 negotiation
-        info.negotiated_version = Some(TLS_VERSION_1_2);
+        let info = TlsHandshakeInfo {
+            negotiated_version: Some(TLS_VERSION_1_2),
+            ..Default::default()
+        };
         assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_2));
     }
 
-    #[test]
+        #[test]
     fn test_cipher_suite_detection() {
-        let mut info = TlsHandshakeInfo::default();
-
         // Test TLS 1.3 cipher suites
-        info.cipher_suite = Some(0x1301); // TLS_AES_128_GCM_SHA256
+        let info = TlsHandshakeInfo {
+            cipher_suite: Some(0x1301), // TLS_AES_128_GCM_SHA256
+            ..Default::default()
+        };
         assert_eq!(info.cipher_suite, Some(0x1301));
 
-        info.cipher_suite = Some(0x1302); // TLS_AES_256_GCM_SHA384
+        let info = TlsHandshakeInfo {
+            cipher_suite: Some(0x1302), // TLS_AES_256_GCM_SHA384
+            ..Default::default()
+        };
         assert_eq!(info.cipher_suite, Some(0x1302));
 
-        info.cipher_suite = Some(0x1303); // TLS_CHACHA20_POLY1305_SHA256
+        let info = TlsHandshakeInfo {
+            cipher_suite: Some(0x1303), // TLS_CHACHA20_POLY1305_SHA256
+            ..Default::default()
+        };
         assert_eq!(info.cipher_suite, Some(0x1303));
     }
 
@@ -899,10 +919,12 @@ mod tests {
 
     #[test]
     fn test_tls_handshake_info_clone() {
-        let mut original = TlsHandshakeInfo::default();
-        original.client_supported_groups = vec![X25519_MLKEM768, X25519];
-        original.server_selected_group = Some(X25519_MLKEM768);
-        original.supports_quantum = true;
+        let original = TlsHandshakeInfo {
+            client_supported_groups: vec![X25519_MLKEM768, X25519],
+            server_selected_group: Some(X25519_MLKEM768),
+            supports_quantum: true,
+            ..Default::default()
+        };
 
         let cloned = original.clone();
         assert_eq!(
@@ -913,44 +935,55 @@ mod tests {
         assert_eq!(cloned.supports_quantum, original.supports_quantum);
     }
 
-    #[test]
+        #[test]
     fn test_comprehensive_quantum_detection() {
-        let mut info = TlsHandshakeInfo::default();
-
         // Scenario 1: Server selects quantum-secure group
-        info.server_selected_group = Some(X25519_MLKEM768);
-        info.server_key_share = Some(X25519_MLKEM768);
-        info.supports_quantum = true;
+        let info = TlsHandshakeInfo {
+            server_selected_group: Some(X25519_MLKEM768),
+            server_key_share: Some(X25519_MLKEM768),
+            supports_quantum: true,
+            ..Default::default()
+        };
         assert!(info.supports_quantum);
 
         // Scenario 2: Server selects classical group despite quantum offer
-        info.server_selected_group = Some(X25519);
-        info.server_key_share = Some(X25519);
-        info.supports_quantum = false;
+        let info = TlsHandshakeInfo {
+            server_selected_group: Some(X25519),
+            server_key_share: Some(X25519),
+            supports_quantum: false,
+            ..Default::default()
+        };
         assert!(!info.supports_quantum);
 
         // Scenario 3: Client offers quantum but server doesn't respond
-        info.client_supported_groups = vec![X25519_MLKEM768, X25519];
-        info.server_selected_group = None;
-        info.supports_quantum = false;
+        let info = TlsHandshakeInfo {
+            client_supported_groups: vec![X25519_MLKEM768, X25519],
+            server_selected_group: None,
+            supports_quantum: false,
+            ..Default::default()
+        };
         assert!(!info.supports_quantum);
     }
 
-    #[test]
+        #[test]
     fn test_tls_version_compatibility() {
         // Test that quantum algorithms require TLS 1.3
-        let mut info = TlsHandshakeInfo::default();
-
         // TLS 1.3 with quantum algorithms should be supported
-        info.negotiated_version = Some(TLS_VERSION_1_3);
-        info.server_selected_group = Some(X25519_MLKEM768);
-        info.supports_quantum = true;
+        let info = TlsHandshakeInfo {
+            negotiated_version: Some(TLS_VERSION_1_3),
+            server_selected_group: Some(X25519_MLKEM768),
+            supports_quantum: true,
+            ..Default::default()
+        };
         assert!(info.supports_quantum);
         assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_3));
 
         // TLS 1.2 should not support quantum algorithms
-        info.negotiated_version = Some(TLS_VERSION_1_2);
-        info.supports_quantum = false;
+        let info = TlsHandshakeInfo {
+            negotiated_version: Some(TLS_VERSION_1_2),
+            supports_quantum: false,
+            ..Default::default()
+        };
         assert!(!info.supports_quantum);
         assert_eq!(info.negotiated_version, Some(TLS_VERSION_1_2));
     }
