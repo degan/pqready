@@ -109,6 +109,8 @@ impl ColorConfig {
 /// Represents the result of a quantum security scan
 #[derive(Debug, serde::Serialize)]
 struct ScanResult {
+    /// The version of pqready that generated this result
+    version: String,
     /// The URL that was tested
     url: String,
     /// Whether the server supports quantum-secure encryption
@@ -126,6 +128,7 @@ struct ScanResult {
 impl ScanResult {
     fn new(url: String) -> Self {
         Self {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             url,
             supports_quantum: false,
             tls_version: None,
@@ -137,6 +140,7 @@ impl ScanResult {
 
     fn with_error(url: String, error: String) -> Self {
         Self {
+            version: env!("CARGO_PKG_VERSION").to_string(),
             url,
             supports_quantum: false,
             tls_version: None,
@@ -712,19 +716,25 @@ fn print_result(result: &ScanResult, verbose: bool, color_config: &ColorConfig) 
     }
     if verbose {
         println!(
-            "{} {}",
+            "{} {} v{}",
             color_config.emoji_or_text("🔍", "[RESULTS]"),
-            color_config.header("Quantum Security Test Results")
+            color_config.header("Quantum Security Test Results"),
+            result.version
         );
     } else {
         let emoji = color_config.emoji_or_text("🔍", "");
         if emoji.is_empty() {
-            println!("{}", color_config.header("Quantum Security Test Results"));
+            println!(
+                "{} v{}",
+                color_config.header("Quantum Security Test Results"),
+                result.version
+            );
         } else {
             println!(
-                "{} {}",
+                "{} {} v{}",
                 emoji,
-                color_config.header("Quantum Security Test Results")
+                color_config.header("Quantum Security Test Results"),
+                result.version
             );
         }
     }
@@ -837,6 +847,7 @@ mod tests {
     fn test_scan_result_creation() {
         let result = ScanResult::new("https://example.com".to_string());
         assert_eq!(result.url, "https://example.com");
+        assert_eq!(result.version, env!("CARGO_PKG_VERSION"));
         assert!(!result.supports_quantum);
         assert!(result.error.is_none());
         assert!(result.tls_version.is_none());
@@ -851,6 +862,7 @@ mod tests {
             "Connection failed".to_string(),
         );
         assert_eq!(result.url, "https://example.com");
+        assert_eq!(result.version, env!("CARGO_PKG_VERSION"));
         assert!(!result.supports_quantum);
         assert_eq!(result.error, Some("Connection failed".to_string()));
         assert!(result.tls_version.is_none());
@@ -861,6 +873,7 @@ mod tests {
     #[test]
     fn test_scan_result_serialization() {
         let result = ScanResult {
+            version: "0.1.0".to_string(),
             url: "https://test.com".to_string(),
             supports_quantum: true,
             tls_version: Some("TLSv1_3".to_string()),
@@ -872,6 +885,7 @@ mod tests {
         let json = serde_json::to_string(&result).unwrap();
         assert!(json.contains("\"supports_quantum\":true"));
         assert!(json.contains("\"url\":\"https://test.com\""));
+        assert!(json.contains("\"version\":\"0.1.0\""));
         assert!(json.contains("\"tls_version\":\"TLSv1_3\""));
     }
 
@@ -1113,6 +1127,7 @@ mod tests {
     #[test]
     fn test_json_output_format() {
         let result = ScanResult {
+            version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: false,
             tls_version: Some("0x0304".to_string()),
@@ -1125,6 +1140,7 @@ mod tests {
 
         // Verify JSON structure
         assert!(json.contains("\"url\""));
+        assert!(json.contains("\"version\""));
         assert!(json.contains("\"supports_quantum\""));
         assert!(json.contains("\"tls_version\""));
         assert!(json.contains("\"cipher_suite\""));
@@ -1133,6 +1149,7 @@ mod tests {
 
         // Verify values
         assert!(json.contains("\"supports_quantum\": false"));
+        assert!(json.contains("\"version\": \"0.1.0\""));
         assert!(json.contains("\"error\": null"));
     }
 
@@ -1259,6 +1276,7 @@ mod tests {
     fn test_print_result_output_formatting() {
         // Test basic scan result
         let result = ScanResult {
+            version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: true,
             tls_version: Some("0x0304".to_string()),
@@ -1326,6 +1344,7 @@ mod tests {
         // Note: This doesn't capture actual stdout, but tests the logic that determines when spacing should occur
 
         let result = ScanResult {
+            version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: true,
             tls_version: Some("0x0304".to_string()),
@@ -1379,6 +1398,7 @@ mod tests {
         // should have consistent leading blank lines in non-verbose mode
 
         let result = ScanResult {
+            version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: true,
             tls_version: None,
