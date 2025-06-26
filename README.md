@@ -18,15 +18,44 @@ Based on Apple's quantum-secure encryption specifications from [iOS 26, iPadOS 2
 
 ## Installation
 
-### Prerequisites
+### Install Pre-built Binary (Recommended)
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/degan/pqready/releases):
+
+#### macOS
+```bash
+# install
+chmod +x pqready
+sudo mv pqready /usr/local/bin/
+```
+
+#### Linux
+```bash
+# install
+chmod +x pqready
+sudo mv pqready /usr/local/bin/
+```
+
+#### Windows
+Download `pqready-windows.exe` from the [releases page](https://github.com/degan/pqready/releases) and add it to your PATH.
+
+### Install from Cargo
+
+```bash
+cargo install pqready
+```
+
+### Building from Source
+
+#### Prerequisites
 
 - Rust 1.70 or later
 - Cargo package manager
 
-### Building from Source
+#### Build Steps
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/degan/pqready.git
 cd pqready
 
 # Using Make (recommended)
@@ -37,12 +66,6 @@ cargo build --release
 ```
 
 The binary will be available at `target/release/pqready` (or `target/release/pqready.exe` on Windows).
-
-### Install from Cargo
-
-```bash
-cargo install pqready
-```
 
 ## Usage
 
