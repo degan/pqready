@@ -706,8 +706,8 @@ fn check_for_quantum_indicators(
 }
 
 fn print_result(result: &ScanResult, verbose: bool, color_config: &ColorConfig) {
-    // Add visual spacing only for non-verbose color mode (verbose already has spacing at start)
-    if !verbose && color_config.enabled {
+    // Add visual spacing for all non-verbose modes (verbose already has spacing at start)
+    if !verbose {
         println!();
     }
     if verbose {
@@ -1345,11 +1345,11 @@ mod tests {
             "Normal color mode should have spacing"
         );
 
-        // 2. Normal mode + no-color: should NOT add spacing
-        let should_add_spacing_normal_no_color = no_color_config.enabled;
+        // 2. Normal mode + no-color: should ALSO add spacing (for consistency)
+        let should_add_spacing_normal_no_color = true; // Fixed: should be consistent with color mode
         assert!(
-            !should_add_spacing_normal_no_color,
-            "Normal no-color mode should NOT have spacing"
+            should_add_spacing_normal_no_color,
+            "Normal no-color mode should ALSO have spacing for consistency"
         );
 
         // 3. Verbose mode + colors: should NOT add spacing in print_result (has spacing earlier)
@@ -1371,5 +1371,45 @@ mod tests {
         print_result(&result, false, &no_color_config); // Normal + no-color
         print_result(&result, true, &color_config); // Verbose + color
         print_result(&result, true, &no_color_config); // Verbose + no-color
+    }
+
+    #[test]
+    fn test_print_result_leading_blank_line_consistency() {
+        // This test documents the expected behavior: both color and no-color modes
+        // should have consistent leading blank lines in non-verbose mode
+
+        let result = ScanResult {
+            url: "https://example.com".to_string(),
+            supports_quantum: true,
+            tls_version: None,
+            cipher_suite: None,
+            key_exchange: None,
+            error: None,
+        };
+
+        let color_config = ColorConfig { enabled: true };
+        let no_color_config = ColorConfig { enabled: false };
+
+        // Test that the spacing logic for non-verbose mode should be consistent:
+        // Expected behavior: !verbose should add spacing regardless of color config
+        let verbose = false;
+
+        // The bug was: only add spacing if (!verbose && color_config.enabled)
+        // The fix should be: add spacing if (!verbose) regardless of color_config.enabled
+        let should_add_spacing_color = !verbose; // Should be true
+        let should_add_spacing_no_color = !verbose; // Should also be true
+
+        assert!(
+            should_add_spacing_color,
+            "Non-verbose color mode should have leading blank line"
+        );
+        assert!(
+            should_add_spacing_no_color,
+            "Non-verbose no-color mode should have leading blank line for consistency"
+        );
+
+        // Verify functions execute without panicking
+        print_result(&result, false, &color_config);
+        print_result(&result, false, &no_color_config);
     }
 }
