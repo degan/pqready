@@ -106,7 +106,14 @@ update:
 .PHONY: audit
 audit:
 	@echo "🔒 Auditing dependencies for security vulnerabilities..."
-	cargo audit
+	@which cargo-audit > /dev/null 2>&1 || { echo "Installing cargo-audit..."; cargo install cargo-audit --locked; }
+	cargo audit --ignore yanked
+
+.PHONY: audit-fix
+audit-fix:
+	@echo "🔧 Auditing and fixing dependencies..."
+	@which cargo-audit > /dev/null 2>&1 || { echo "Installing cargo-audit..."; cargo install cargo-audit --locked; }
+	cargo audit fix --ignore yanked
 
 # Documentation targets
 .PHONY: doc
@@ -162,10 +169,14 @@ publish-dirty: ci publish-check-dirty
 
 # Development workflow
 .PHONY: dev
-dev: fmt clippy-all test build
+dev: fmt clippy-all test audit build
 
 .PHONY: ci
-ci: fmt-check clippy-all test build
+ci: fmt-check clippy-all test audit build
+
+.PHONY: security
+security: audit
+	@echo "✅ Security audit completed successfully"
 
 # Demo targets
 .PHONY: demo
@@ -216,6 +227,8 @@ help:
 	@echo "  clean         Clean build artifacts"
 	@echo "  update        Update dependencies"
 	@echo "  audit         Audit dependencies for vulnerabilities"
+	@echo "  audit-fix     Audit dependencies and fix vulnerabilities"
+	@echo "  security      Run complete security audit"
 	@echo "  doc           Build documentation"
 	@echo "  doc-open      Build and open documentation"
 	@echo "  strip         Strip release binary (reduce size)"

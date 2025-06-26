@@ -61,9 +61,17 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # Use a dedicated action for security audit - much faster than manual installation
-      - name: Security audit
-        uses: EmbarkStudios/cargo-audit-action@v1
+      - name: Cache cargo-audit
+        uses: actions/cache@v4
         with:
-          # Only check for vulnerabilities that have fixes available
-          args: --ignore yanked
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-v0.21.0
+
+      - name: Install cargo-audit
+        run: |
+          if ! command -v cargo-audit &> /dev/null; then
+            cargo install cargo-audit --version 0.21.0 --locked
+          fi
+
+      - name: Run security audit
+        run: cargo audit --ignore yanked
