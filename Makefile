@@ -3,7 +3,7 @@
 # Project information
 PROJECT_NAME := pqready
 BINARY_NAME := pqready
-VERSION := 0.1.0
+VERSION := 0.1.1
 
 # Default target
 .PHONY: all
