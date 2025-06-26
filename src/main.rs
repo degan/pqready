@@ -242,6 +242,7 @@ async fn main() -> Result<()> {
     };
 
     if verbose && !json_output {
+        println!();
         println!(
             "{} {}",
             color_config.emoji_or_text("🔍", "[SCAN]"),
@@ -705,7 +706,10 @@ fn check_for_quantum_indicators(
 }
 
 fn print_result(result: &ScanResult, verbose: bool, color_config: &ColorConfig) {
-    println!();
+    // Add visual spacing only for non-verbose color mode (verbose already has spacing at start)
+    if !verbose && color_config.enabled {
+        println!();
+    }
     if verbose {
         println!(
             "{} {}",
@@ -717,7 +721,11 @@ fn print_result(result: &ScanResult, verbose: bool, color_config: &ColorConfig) 
         if emoji.is_empty() {
             println!("{}", color_config.header("Quantum Security Test Results"));
         } else {
-            println!("{} {}", emoji, color_config.header("Quantum Security Test Results"));
+            println!(
+                "{} {}",
+                emoji,
+                color_config.header("Quantum Security Test Results")
+            );
         }
     }
     println!("URL: {}", color_config.url_highlight(&result.url));
@@ -1150,10 +1158,15 @@ mod tests {
         // Test that ColorConfig::new behaves consistently with should_use_color
         let color_config = ColorConfig::new(false);
         assert_eq!(color_config.enabled, ColorConfig::should_use_color(false));
-        
-        // Test that the no_color_flag parameter is respected
+
+        // Test that the no_color_flag parameter is respected consistently
         assert_eq!(ColorConfig::new(true).enabled, false);
-        assert_eq!(ColorConfig::new(false).enabled, ColorConfig::should_use_color(false));
+
+        // Test direct ColorConfig creation for known states
+        let enabled_config = ColorConfig { enabled: true };
+        let disabled_config = ColorConfig { enabled: false };
+        assert!(enabled_config.enabled);
+        assert!(!disabled_config.enabled);
     }
 
     #[test]
@@ -1189,7 +1202,10 @@ mod tests {
         // Test with colors disabled
         let no_color_config = ColorConfig { enabled: false };
         assert_eq!(no_color_config.emoji_or_text("🔍", "[SCAN]"), "[SCAN]");
-        assert_eq!(no_color_config.emoji_or_text("✅", "[SUCCESS]"), "[SUCCESS]");
+        assert_eq!(
+            no_color_config.emoji_or_text("✅", "[SUCCESS]"),
+            "[SUCCESS]"
+        );
         assert_eq!(no_color_config.emoji_or_text("❌", "[ERROR]"), "[ERROR]");
         assert_eq!(no_color_config.emoji_or_text("🔍", ""), "");
     }
@@ -1201,10 +1217,19 @@ mod tests {
 
         // Test that no-color config returns plain text
         assert_eq!(no_color_config.status_success("SUPPORTED"), "SUPPORTED");
-        assert_eq!(no_color_config.status_error("NOT SUPPORTED"), "NOT SUPPORTED");
+        assert_eq!(
+            no_color_config.status_error("NOT SUPPORTED"),
+            "NOT SUPPORTED"
+        );
         assert_eq!(no_color_config.header("Test Header"), "Test Header");
-        assert_eq!(no_color_config.url_highlight("https://example.com"), "https://example.com");
-        assert_eq!(no_color_config.warning("Warning message"), "Warning message");
+        assert_eq!(
+            no_color_config.url_highlight("https://example.com"),
+            "https://example.com"
+        );
+        assert_eq!(
+            no_color_config.warning("Warning message"),
+            "Warning message"
+        );
         assert_eq!(no_color_config.dimmed("Dimmed text"), "Dimmed text");
 
         // Test that color config methods don't crash and return strings
@@ -1275,7 +1300,7 @@ mod tests {
         let normal_without_color = no_color_config.emoji_or_text("🔍", "");
         assert_eq!(normal_without_color, "");
 
-        // Verbose mode - should show emoji when colors enabled  
+        // Verbose mode - should show emoji when colors enabled
         let verbose_with_color = color_config.emoji_or_text("🔍", "[RESULTS]");
         assert_eq!(verbose_with_color, "🔍");
 
