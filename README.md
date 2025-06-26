@@ -234,10 +234,7 @@ Follow this workflow to create a new release:
 
 #### 2. Test Everything Locally
 ```bash
-make test          # Run all tests
-make clippy        # Check code quality  
-make fmt-check     # Check formatting
-cargo build --release  # Test release build
+make dev 
 ```
 
 #### 3. Commit and Push Changes

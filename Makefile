@@ -42,10 +42,9 @@ check:
 	@echo "🔍 Checking code..."
 	cargo check
 
+# Deprecated for clippy-all target but keeping for backwards compatibility
 .PHONY: clippy
-clippy:
-	@echo "📎 Running clippy..."
-	cargo clippy -- -D warnings
+clippy: clippy-all
 
 .PHONY: clippy-all
 clippy-all:
