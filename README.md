@@ -1,4 +1,4 @@
-# pqready - Quantum Security Scanner
+# pqready - Post-Quantum TLS Validator
 
 A cross-platform CLI tool to test TLS/HTTPS servers for quantum-secure encryption support, specifically the `X25519MLKEM768` key exchange algorithm introduced in Apple's latest operating systems.
 
@@ -74,6 +74,9 @@ Options:
   -v, --verbose          Enable verbose output
   -j, --json            Output results in JSON format
   -t, --timeout <SECONDS> Connection timeout in seconds [default: 10]
+  -r, --regular         Use regular high-level TLS analysis (limited quantum detection)
+  -c, --conservative    Use conservative ClientHello (for servers that reject unknown groups)
+  -n, --no-color        Disable color and emoji output
   -h, --help            Print help
   -V, --version         Print version
 ```
