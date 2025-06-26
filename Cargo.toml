@@ -1,6 +1,6 @@
 [package]
 name = "pqready"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "A cross-platform CLI tool to test for quantum-secure TLS/HTTPS encryption support"
 authors = ["Devin Egan <github@devinegan.com>"]
