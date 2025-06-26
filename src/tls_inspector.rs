@@ -1,6 +1,7 @@
 // TLS Inspector for quantum-secure encryption detection
 // This module handles the low-level TLS handshake analysis
 
+use crate::ColorConfig;
 use anyhow::{anyhow, Result};
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -60,32 +61,47 @@ impl TlsInspector {
         &mut self,
         hostname: &str,
         verbose: bool,
+        color_config: &ColorConfig,
     ) -> Result<TlsHandshakeInfo> {
         if verbose {
-            println!("🔬 Starting low-level TLS handshake analysis");
+            println!(
+                "{} Starting low-level TLS handshake analysis",
+                color_config.emoji_or_text("🔬", "[DEEP]")
+            );
         }
 
         // Send a ClientHello with quantum-secure groups
-        self.send_quantum_client_hello(hostname, verbose)?;
+        self.send_quantum_client_hello(hostname, verbose, color_config)?;
 
         // Read and parse ServerHello
-        self.parse_server_response(verbose)?;
+        self.parse_server_response(verbose, color_config)?;
 
         // Analyze for quantum-secure algorithms
-        self.analyze_quantum_support(verbose);
+        self.analyze_quantum_support(verbose, color_config);
 
         Ok(self.handshake_info.clone())
     }
 
-    fn send_quantum_client_hello(&mut self, hostname: &str, verbose: bool) -> Result<()> {
+    fn send_quantum_client_hello(
+        &mut self,
+        hostname: &str,
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         if verbose {
-            println!("📤 Sending ClientHello with quantum-secure groups");
+            println!(
+                "{} Sending ClientHello with quantum-secure groups",
+                color_config.emoji_or_text("📤", "[SEND]")
+            );
         }
 
         let client_hello = self.build_quantum_client_hello(hostname)?;
 
         if verbose {
-            println!("🔍 ClientHello details:");
+            println!(
+                "{} ClientHello details:",
+                color_config.emoji_or_text("🔍", "[DETAILS]")
+            );
             println!("   • Total size: {} bytes", client_hello.len());
             println!("   • Hostname: {}", hostname);
             println!("   • Client offering groups: X25519+ML-KEM-768 (0x11ec), X25519+Kyber768-Draft00 (0x6399), X25519 (0x001d)");
@@ -95,7 +111,10 @@ impl TlsInspector {
         self.stream.flush()?;
 
         if verbose {
-            println!("✅ ClientHello sent successfully");
+            println!(
+                "{} ClientHello sent successfully",
+                color_config.emoji_or_text("✅", "[SENT]")
+            );
         }
 
         Ok(())
@@ -282,19 +301,27 @@ impl TlsInspector {
         extensions.extend_from_slice(&sig_algs_data);
     }
 
-    fn parse_server_response(&mut self, verbose: bool) -> Result<()> {
+    fn parse_server_response(&mut self, verbose: bool, color_config: &ColorConfig) -> Result<()> {
         if verbose {
-            println!("📥 Reading server response...");
+            println!(
+                "{} Reading server response...",
+                color_config.emoji_or_text("📥", "[RECV]")
+            );
         }
 
         let mut buffer = vec![0u8; 4096];
         let bytes_read = self.stream.read(&mut buffer)?;
 
         if verbose {
-            println!("📦 Received {} bytes from server", bytes_read);
+            println!(
+                "{} Received {} bytes from server",
+                color_config.emoji_or_text("📦", "[DATA]"),
+                bytes_read
+            );
             if bytes_read > 0 {
                 println!(
-                    "🔍 Raw response (first {} bytes): {:02x?}",
+                    "{} Raw response (first {} bytes): {:02x?}",
+                    color_config.emoji_or_text("🔍", "[RAW]"),
                     std::cmp::min(bytes_read, 20),
                     &buffer[..std::cmp::min(bytes_read, 20)]
                 );
@@ -322,12 +349,17 @@ impl TlsInspector {
 
         buffer.truncate(bytes_read);
 
-        self.parse_tls_records(&buffer, verbose)?;
+        self.parse_tls_records(&buffer, verbose, color_config)?;
 
         Ok(())
     }
 
-    fn parse_tls_records(&mut self, data: &[u8], verbose: bool) -> Result<()> {
+    fn parse_tls_records(
+        &mut self,
+        data: &[u8],
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         let mut offset = 0;
 
         while offset + 5 <= data.len() {
@@ -341,34 +373,59 @@ impl TlsInspector {
 
             if verbose {
                 println!(
-                    "📋 TLS Record: type={:02x}, version={:04x}, length={}",
-                    content_type, version, length
+                    "{} TLS Record: type={:02x}, version={:04x}, length={}",
+                    color_config.emoji_or_text("📋", "[RECORD]"),
+                    content_type,
+                    version,
+                    length
                 );
             }
 
             match content_type {
                 TLS_HANDSHAKE => {
-                    self.parse_handshake_messages(&data[offset + 5..offset + 5 + length], verbose)?;
+                    self.parse_handshake_messages(
+                        &data[offset + 5..offset + 5 + length],
+                        verbose,
+                        color_config,
+                    )?;
                 }
                 TLS_CHANGE_CIPHER_SPEC => {
                     if verbose {
-                        println!("🔄 ChangeCipherSpec (TLS 1.3 compatibility)");
+                        println!(
+                            "{} ChangeCipherSpec (TLS 1.3 compatibility)",
+                            color_config.emoji_or_text("🔄", "[CHANGE]")
+                        );
                     }
                 }
                 TLS_ALERT => {
                     if verbose {
-                        println!("⚠️  TLS Alert received");
+                        println!(
+                            "{} TLS Alert received",
+                            color_config.emoji_or_text("⚠️", "[ALERT]")
+                        );
                     }
-                    self.parse_tls_alert(&data[offset + 5..offset + 5 + length], verbose)?;
+                    self.parse_tls_alert(
+                        &data[offset + 5..offset + 5 + length],
+                        verbose,
+                        color_config,
+                    )?;
                 }
                 TLS_APPLICATION_DATA => {
                     if verbose {
-                        println!("📊 Application Data ({} bytes encrypted)", length);
+                        println!(
+                            "{} Application Data ({} bytes encrypted)",
+                            color_config.emoji_or_text("📊", "[APP_DATA]"),
+                            length
+                        );
                     }
                 }
                 _ => {
                     if verbose {
-                        println!("❓ Unknown TLS record type: 0x{:02x}", content_type);
+                        println!(
+                            "{} Unknown TLS record type: 0x{:02x}",
+                            color_config.emoji_or_text("❓", "[UNKNOWN]"),
+                            content_type
+                        );
                     }
                 }
             }
@@ -379,7 +436,12 @@ impl TlsInspector {
         Ok(())
     }
 
-    fn parse_handshake_messages(&mut self, data: &[u8], verbose: bool) -> Result<()> {
+    fn parse_handshake_messages(
+        &mut self,
+        data: &[u8],
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         let mut offset = 0;
 
         while offset + 4 <= data.len() {
@@ -394,18 +456,28 @@ impl TlsInspector {
 
             if verbose {
                 println!(
-                    "🤝 Handshake message: type={:02x}, length={}",
-                    msg_type, length
+                    "{} Handshake message: type={:02x}, length={}",
+                    color_config.emoji_or_text("🤝", "[HANDSHAKE]"),
+                    msg_type,
+                    length
                 );
             }
 
             match msg_type {
                 SERVER_HELLO => {
-                    self.parse_server_hello(&data[offset + 4..offset + 4 + length], verbose)?;
+                    self.parse_server_hello(
+                        &data[offset + 4..offset + 4 + length],
+                        verbose,
+                        color_config,
+                    )?;
                 }
                 _ => {
                     if verbose {
-                        println!("📝 Other handshake message type: {:02x}", msg_type);
+                        println!(
+                            "{} Other handshake message type: {:02x}",
+                            color_config.emoji_or_text("📝", "[OTHER]"),
+                            msg_type
+                        );
                     }
                 }
             }
@@ -416,7 +488,12 @@ impl TlsInspector {
         Ok(())
     }
 
-    fn parse_server_hello(&mut self, data: &[u8], verbose: bool) -> Result<()> {
+    fn parse_server_hello(
+        &mut self,
+        data: &[u8],
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         if data.len() < 38 {
             return Err(anyhow!("ServerHello too short"));
         }
@@ -425,7 +502,11 @@ impl TlsInspector {
         self.handshake_info.negotiated_version = Some(version);
 
         if verbose {
-            println!("🔒 ServerHello version: {:04x}", version);
+            println!(
+                "{} ServerHello version: {:04x}",
+                color_config.emoji_or_text("🔒", "[VERSION]"),
+                version
+            );
         }
 
         // Skip random (32 bytes) and session ID
@@ -443,7 +524,11 @@ impl TlsInspector {
         offset += 2;
 
         if verbose {
-            println!("🔑 Selected cipher suite: {:04x}", cipher_suite);
+            println!(
+                "{} Selected cipher suite: {:04x}",
+                color_config.emoji_or_text("🔑", "[CIPHER]"),
+                cipher_suite
+            );
         }
 
         // Compression method
@@ -455,14 +540,23 @@ impl TlsInspector {
             offset += 2;
 
             if offset + extensions_len <= data.len() {
-                self.parse_server_extensions(&data[offset..offset + extensions_len], verbose)?;
+                self.parse_server_extensions(
+                    &data[offset..offset + extensions_len],
+                    verbose,
+                    color_config,
+                )?;
             }
         }
 
         Ok(())
     }
 
-    fn parse_server_extensions(&mut self, data: &[u8], verbose: bool) -> Result<()> {
+    fn parse_server_extensions(
+        &mut self,
+        data: &[u8],
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         let mut offset = 0;
 
         while offset + 4 <= data.len() {
@@ -475,25 +569,42 @@ impl TlsInspector {
             }
 
             if verbose {
-                println!("🔧 Extension: type={:04x}, length={}", ext_type, ext_len);
+                println!(
+                    "{} Extension: type={:04x}, length={}",
+                    color_config.emoji_or_text("🔧", "[EXT]"),
+                    ext_type,
+                    ext_len
+                );
             }
 
             match ext_type {
                 KEY_SHARE => {
-                    self.parse_key_share_extension(&data[offset..offset + ext_len], verbose)?;
+                    self.parse_key_share_extension(
+                        &data[offset..offset + ext_len],
+                        verbose,
+                        color_config,
+                    )?;
                 }
                 SUPPORTED_VERSIONS => {
                     if ext_len >= 2 {
                         let version = u16::from_be_bytes([data[offset], data[offset + 1]]);
                         self.handshake_info.negotiated_version = Some(version);
                         if verbose {
-                            println!("✅ Negotiated version: {:04x}", version);
+                            println!(
+                                "{} Negotiated version: {:04x}",
+                                color_config.emoji_or_text("✅", "[NEGOTIATED]"),
+                                version
+                            );
                         }
                     }
                 }
                 _ => {
                     if verbose {
-                        println!("📎 Other extension: {:04x}", ext_type);
+                        println!(
+                            "{} Other extension: {:04x}",
+                            color_config.emoji_or_text("📎", "[OTHER_EXT]"),
+                            ext_type
+                        );
                     }
                 }
             }
@@ -504,89 +615,138 @@ impl TlsInspector {
         Ok(())
     }
 
-    fn parse_key_share_extension(&mut self, data: &[u8], verbose: bool) -> Result<()> {
+    fn parse_key_share_extension(
+        &mut self,
+        data: &[u8],
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         if verbose {
-            println!("🔍 Key share extension data: {:02x?}", data);
+            println!(
+                "{} Key share extension data: {:02x?}",
+                color_config.emoji_or_text("🔍", "[KEY_SHARE]"),
+                data
+            );
         }
 
         if data.len() < 2 {
             if verbose {
-                println!("⚠️  Key share extension too short ({} bytes)", data.len());
-            }
-            return Ok(());
-        }
-
-        // Check if this is a Hello Retry Request (2 bytes = just the group)
-        if data.len() == 2 {
-            let group = u16::from_be_bytes([data[0], data[1]]);
-            if verbose {
                 println!(
-                    "🔄 Hello Retry Request - Server selected group: {:04x}",
-                    group
-                );
-            }
-            self.handshake_info.server_selected_group = Some(group);
-            return Ok(());
-        }
-
-        // Standard key share format (4+ bytes)
-        if data.len() < 4 {
-            if verbose {
-                println!(
-                    "⚠️  Key share extension too short for standard format ({} bytes)",
+                    "{} Key share extension too short ({} bytes)",
+                    color_config.emoji_or_text("⚠️", "[WARNING]"),
                     data.len()
                 );
             }
             return Ok(());
         }
 
-        let group = u16::from_be_bytes([data[0], data[1]]);
-        let key_len = u16::from_be_bytes([data[2], data[3]]) as usize;
+        // Check if this is a Hello Retry Request (just group selection)
+        if data.len() == 2 {
+            let group = u16::from_be_bytes([data[0], data[1]]);
+            self.handshake_info.server_selected_group = Some(group);
 
-        self.handshake_info.server_selected_group = Some(group);
-        self.handshake_info.server_key_share = Some(group);
+            if verbose {
+                println!(
+                    "{} Hello Retry Request - Server selected group: {:04x}",
+                    color_config.emoji_or_text("🔄", "[RETRY]"),
+                    group
+                );
 
-        if verbose {
-            println!(
-                "🗝️  Server selected group: {:04x} (key length: {})",
-                group, key_len
-            );
-            if group == X25519_KYBER768_DRAFT {
-                println!("🎯 QUANTUM-SECURE: X25519+Kyber768-Draft00 detected!");
-            } else if group == X25519_MLKEM768 {
-                println!("🎯 QUANTUM-SECURE: X25519+ML-KEM-768 detected!");
-            } else if group == X25519 {
-                println!("🔧 Classical: X25519 detected");
+                match group {
+                    X25519_KYBER768_DRAFT => {
+                        println!(
+                            "{} QUANTUM-SECURE: X25519+Kyber768-Draft00 detected!",
+                            color_config.emoji_or_text("🎯", "[QUANTUM]")
+                        );
+                    }
+                    X25519_MLKEM768 => {
+                        println!(
+                            "{} QUANTUM-SECURE: X25519+ML-KEM-768 detected!",
+                            color_config.emoji_or_text("🎯", "[QUANTUM]")
+                        );
+                    }
+                    X25519 => {
+                        println!(
+                            "{} Classical: X25519 detected",
+                            color_config.emoji_or_text("🔧", "[CLASSICAL]")
+                        );
+                    }
+                    _ => {
+                        println!(
+                            "{} Server selected group: {:04x} (key length: {})",
+                            color_config.emoji_or_text("🗝️", "[KEY]"),
+                            group,
+                            data.len() - 4
+                        );
+                    }
+                }
+            }
+            return Ok(());
+        }
+
+        // Parse normal key share
+        if data.len() >= 4 {
+            let group = u16::from_be_bytes([data[0], data[1]]);
+            let key_length = u16::from_be_bytes([data[2], data[3]]) as usize;
+
+            self.handshake_info.server_selected_group = Some(group);
+            self.handshake_info.server_key_share = Some(group);
+
+            if verbose {
+                println!(
+                    "{} Server selected group: {:04x} (key length: {})",
+                    color_config.emoji_or_text("🗝️", "[KEY]"),
+                    group,
+                    key_length
+                );
             }
         }
 
         Ok(())
     }
 
-    fn analyze_quantum_support(&mut self, verbose: bool) {
+    fn analyze_quantum_support(&mut self, verbose: bool, color_config: &ColorConfig) {
         // Check if quantum-secure key exchange was negotiated
         let quantum_support = self
             .handshake_info
             .server_selected_group
-            .map(|group| group == X25519_MLKEM768 || group == X25519_KYBER768_DRAFT)
+            .map(|group| matches!(group, X25519_MLKEM768 | X25519_KYBER768_DRAFT))
             .unwrap_or(false);
 
         self.handshake_info.supports_quantum = quantum_support;
 
         if verbose {
             if quantum_support {
-                println!("🛡️  ✅ QUANTUM-SECURE ENCRYPTION DETECTED!");
-                println!("🔬 X25519+ML-KEM-768 hybrid key exchange is active");
+                println!(
+                    "{} QUANTUM-SECURE ENCRYPTION DETECTED!",
+                    color_config.emoji_or_text("🛡️", "[SECURE]")
+                );
+                println!(
+                    "{} X25519+ML-KEM-768 hybrid key exchange is active",
+                    color_config.emoji_or_text("🔬", "[HYBRID]")
+                );
             } else {
-                println!("🛡️  ❌ No quantum-secure encryption detected");
+                println!(
+                    "{} No quantum-secure encryption detected",
+                    color_config.emoji_or_text("🛡️", "[NOT_SECURE]")
+                );
                 if let Some(group) = self.handshake_info.server_selected_group {
-                    println!("🔧 Using classical key exchange: {:04x}", group);
+                    println!(
+                        "{} Using classical key exchange: {:04x}",
+                        color_config.emoji_or_text("🔧", "[CLASSICAL]"),
+                        group
+                    );
                 }
             }
         }
     }
 
-    fn parse_tls_alert(&mut self, data: &[u8], verbose: bool) -> Result<()> {
+    fn parse_tls_alert(
+        &mut self,
+        data: &[u8],
+        verbose: bool,
+        color_config: &ColorConfig,
+    ) -> Result<()> {
         if data.len() < 2 {
             return Err(anyhow!("Invalid TLS Alert format"));
         }
@@ -631,24 +791,34 @@ impl TlsInspector {
 
         if verbose {
             println!(
-                "🚨 TLS Alert: {} {} (level={}, code={})",
-                level_str, description_str, level, description
+                "{} TLS Alert: {} {} (level={}, code={})",
+                color_config.emoji_or_text("🚨", "[ALERT]"),
+                level_str,
+                description_str,
+                level,
+                description
             );
             if description == 110 {
                 println!(
-                    "💡 This means the server doesn't recognize our quantum-secure extensions"
+                    "{} This means the server doesn't recognize our quantum-secure extensions",
+                    color_config.emoji_or_text("💡", "[INFO]")
                 );
             } else if description == 50 {
-                println!("💡 Server cannot decode/parse our ClientHello - likely due to unknown quantum extensions");
+                println!("{} Server cannot decode/parse our ClientHello - likely due to unknown quantum extensions", 
+                    color_config.emoji_or_text("💡", "[INFO]"));
             } else if description == 40 {
-                println!("💡 Handshake failure - server rejected our key exchange proposals");
+                println!(
+                    "{} Handshake failure - server rejected our key exchange proposals",
+                    color_config.emoji_or_text("💡", "[INFO]")
+                );
             }
         }
 
         // Alert code 32 doesn't exist in standard TLS - let me check what this actually is
         if description == 32 && verbose {
             println!(
-                "⚠️  Alert code 32 - this may be a non-standard or implementation-specific alert"
+                "{} Alert code 32 - this may be a non-standard or implementation-specific alert",
+                color_config.emoji_or_text("⚠️", "[WARNING]")
             );
         }
 

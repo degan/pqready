@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::{Arg, Command};
 use colored::*;
+use std::env;
 use std::net::{TcpStream as StdTcpStream, ToSocketAddrs};
 use std::sync::Arc;
 use tokio::net::TcpStream;
@@ -8,6 +9,102 @@ use tokio_rustls::{rustls, TlsConnector};
 use url::Url;
 
 mod tls_inspector;
+
+/// Color configuration for output
+#[derive(Debug, Clone)]
+pub struct ColorConfig {
+    enabled: bool,
+}
+
+impl ColorConfig {
+    pub fn new(no_color_flag: bool) -> Self {
+        let enabled = Self::should_use_color(no_color_flag);
+
+        // Configure the colored crate globally
+        colored::control::set_override(enabled);
+
+        Self { enabled }
+    }
+
+    fn should_use_color(no_color_flag: bool) -> bool {
+        // If --no-color flag is explicitly set, disable colors
+        if no_color_flag {
+            return false;
+        }
+
+        // Check NO_COLOR environment variable (any value disables color)
+        if env::var("NO_COLOR").is_ok() {
+            return false;
+        }
+
+        // Check TERM=dumb (disables color)
+        if let Ok(term) = env::var("TERM") {
+            if term == "dumb" {
+                return false;
+            }
+        }
+
+        // Default to automatic detection: color on for interactive terminals, off for pipes/files
+        std::io::IsTerminal::is_terminal(&std::io::stdout())
+    }
+
+    // Helper methods for styled output
+    pub fn emoji_or_text(&self, emoji: &str, text: &str) -> String {
+        if self.enabled {
+            emoji.to_string()
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn status_success(&self, text: &str) -> String {
+        if self.enabled {
+            text.green().bold().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn status_error(&self, text: &str) -> String {
+        if self.enabled {
+            text.red().bold().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn header(&self, text: &str) -> String {
+        if self.enabled {
+            text.bold().blue().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn url_highlight(&self, text: &str) -> String {
+        if self.enabled {
+            text.yellow().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn warning(&self, text: &str) -> String {
+        if self.enabled {
+            text.yellow().bold().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+
+    fn dimmed(&self, text: &str) -> String {
+        if self.enabled {
+            text.dimmed().to_string()
+        } else {
+            text.to_string()
+        }
+    }
+}
 
 /// Represents the result of a quantum security scan
 #[derive(Debug, serde::Serialize)]
@@ -101,6 +198,12 @@ async fn main() -> Result<()> {
                 .help("Use conservative ClientHello (for servers that reject unknown groups)")
                 .action(clap::ArgAction::SetTrue),
         )
+        .arg(
+            Arg::new("no-color")
+                .long("no-color")
+                .help("Disable color and emoji output")
+                .action(clap::ArgAction::SetTrue),
+        )
         .get_matches();
 
     let url_str = matches.get_one::<String>("url").unwrap();
@@ -108,11 +211,15 @@ async fn main() -> Result<()> {
     let json_output = matches.get_flag("json");
     let regular = matches.get_flag("regular");
     let conservative = matches.get_flag("conservative");
+    let no_color = matches.get_flag("no-color");
     let timeout: u64 = matches
         .get_one::<String>("timeout")
         .unwrap()
         .parse()
         .map_err(|_| anyhow!("Invalid timeout value"))?;
+
+    // Initialize color configuration
+    let color_config = ColorConfig::new(no_color);
 
     // Validate and parse URL
     let url = match Url::parse(url_str) {
@@ -135,22 +242,33 @@ async fn main() -> Result<()> {
     };
 
     if verbose && !json_output {
-        println!("{}", "🔍 Quantum Security Scanner".bold().blue());
-        println!("Testing: {}", url.as_str().yellow());
+        println!(
+            "{} {}",
+            color_config.emoji_or_text("🔍", "[SCAN]"),
+            color_config.header("Quantum Security Scanner")
+        );
+        println!("Testing: {}", color_config.url_highlight(url.as_str()));
         println!("Timeout: {}s", timeout);
         println!();
     }
 
     let result = if regular {
-        scan_quantum_support(&url, timeout, verbose && !json_output).await
+        scan_quantum_support(&url, timeout, verbose && !json_output, &color_config).await
     } else {
-        scan_quantum_support_deep(&url, timeout, verbose && !json_output, conservative).await
+        scan_quantum_support_deep(
+            &url,
+            timeout,
+            verbose && !json_output,
+            conservative,
+            &color_config,
+        )
+        .await
     };
 
     if json_output {
         println!("{}", serde_json::to_string_pretty(&result)?);
     } else {
-        print_result(&result, verbose);
+        print_result(&result, verbose, &color_config);
     }
 
     Ok(())
@@ -161,6 +279,7 @@ async fn scan_quantum_support_deep(
     timeout_secs: u64,
     verbose: bool,
     _conservative: bool,
+    color_config: &ColorConfig,
 ) -> ScanResult {
     let host = match url.host_str() {
         Some(h) => h,
@@ -170,8 +289,16 @@ async fn scan_quantum_support_deep(
     let port = url.port().unwrap_or(443);
 
     if verbose {
-        println!("🔬 Starting DEEP quantum security analysis");
-        println!("🔌 Connecting to {}:{}", host, port);
+        println!(
+            "{} Starting DEEP quantum security analysis",
+            color_config.emoji_or_text("🔬", "[DEEP]")
+        );
+        println!(
+            "{} Connecting to {}:{}",
+            color_config.emoji_or_text("🔌", "[CONNECT]"),
+            host,
+            port
+        );
     }
 
     // Resolve hostname
@@ -191,7 +318,11 @@ async fn scan_quantum_support_deep(
     };
 
     if verbose {
-        println!("📡 Resolved to: {}", addr);
+        println!(
+            "{} Resolved to: {}",
+            color_config.emoji_or_text("📡", "[RESOLVED]"),
+            addr
+        );
     }
 
     // Create synchronous TCP connection for low-level analysis
@@ -204,7 +335,10 @@ async fn scan_quantum_support_deep(
         };
 
     if verbose {
-        println!("🤝 TCP connection established");
+        println!(
+            "{} TCP connection established",
+            color_config.emoji_or_text("🤝", "[CONNECTED]")
+        );
     }
 
     // Perform deep TLS handshake analysis
@@ -218,15 +352,16 @@ async fn scan_quantum_support_deep(
         }
     };
 
-    let handshake_info = match inspector.perform_quantum_handshake_analysis(host, verbose) {
-        Ok(info) => info,
-        Err(e) => {
-            return ScanResult::with_error(
-                url.to_string(),
-                format!("TLS handshake analysis failed: {}", e),
-            )
-        }
-    };
+    let handshake_info =
+        match inspector.perform_quantum_handshake_analysis(host, verbose, color_config) {
+            Ok(info) => info,
+            Err(e) => {
+                return ScanResult::with_error(
+                    url.to_string(),
+                    format!("TLS handshake analysis failed: {}", e),
+                )
+            }
+        };
 
     // Convert handshake info to ScanResult
     let mut result = ScanResult::new(url.to_string());
@@ -247,18 +382,32 @@ async fn scan_quantum_support_deep(
     }
 
     if verbose {
-        println!("🔬 Deep analysis complete!");
+        println!(
+            "{} Deep analysis complete!",
+            color_config.emoji_or_text("🔬", "[ANALYSIS]")
+        );
         if handshake_info.supports_quantum {
-            println!("🎯 QUANTUM-SECURE ENCRYPTION CONFIRMED!");
+            println!(
+                "{} QUANTUM-SECURE ENCRYPTION CONFIRMED!",
+                color_config.emoji_or_text("🎯", "[SUCCESS]")
+            );
         } else {
-            println!("❌ No quantum-secure encryption found");
+            println!(
+                "{} No quantum-secure encryption found",
+                color_config.emoji_or_text("❌", "[FAILED]")
+            );
         }
     }
 
     result
 }
 
-async fn scan_quantum_support(url: &Url, timeout_secs: u64, verbose: bool) -> ScanResult {
+async fn scan_quantum_support(
+    url: &Url,
+    timeout_secs: u64,
+    verbose: bool,
+    color_config: &ColorConfig,
+) -> ScanResult {
     let host = match url.host_str() {
         Some(h) => h,
         None => return ScanResult::with_error(url.to_string(), "Invalid hostname".to_string()),
@@ -267,8 +416,16 @@ async fn scan_quantum_support(url: &Url, timeout_secs: u64, verbose: bool) -> Sc
     let port = url.port().unwrap_or(443);
 
     if verbose {
-        println!("🔧 Starting REGULAR quantum security analysis (high-level)");
-        println!("🔌 Connecting to {}:{}", host, port);
+        println!(
+            "{} Starting REGULAR quantum security analysis (high-level)",
+            color_config.emoji_or_text("🔧", "[REGULAR]")
+        );
+        println!(
+            "{} Connecting to {}:{}",
+            color_config.emoji_or_text("🔌", "[CONNECT]"),
+            host,
+            port
+        );
     }
 
     // Create a custom TLS config that supports quantum-secure algorithms
@@ -292,7 +449,11 @@ async fn scan_quantum_support(url: &Url, timeout_secs: u64, verbose: bool) -> Sc
     };
 
     if verbose {
-        println!("📡 Resolved to: {}", addr);
+        println!(
+            "{} Resolved to: {}",
+            color_config.emoji_or_text("📡", "[RESOLVED]"),
+            addr
+        );
     }
 
     // Connect with timeout
@@ -310,7 +471,10 @@ async fn scan_quantum_support(url: &Url, timeout_secs: u64, verbose: bool) -> Sc
     };
 
     if verbose {
-        println!("🤝 TCP connection established");
+        println!(
+            "{} TCP connection established",
+            color_config.emoji_or_text("🤝", "[CONNECTED]")
+        );
     }
 
     // Perform TLS handshake
@@ -337,12 +501,15 @@ async fn scan_quantum_support(url: &Url, timeout_secs: u64, verbose: bool) -> Sc
     };
 
     if verbose {
-        println!("🔐 TLS handshake completed");
+        println!(
+            "{} TLS handshake completed",
+            color_config.emoji_or_text("🔐", "[TLS]")
+        );
     }
 
     // Analyze the TLS connection
     let (_, connection) = tls_stream.into_inner();
-    analyze_tls_connection(url.to_string(), &connection, verbose)
+    analyze_tls_connection(url.to_string(), &connection, verbose, color_config)
 }
 
 fn create_quantum_tls_config() -> rustls::ClientConfig {
@@ -374,6 +541,7 @@ fn analyze_tls_connection(
     url: String,
     connection: &rustls::ClientConnection,
     verbose: bool,
+    color_config: &ColorConfig,
 ) -> ScanResult {
     let mut result = ScanResult::new(url);
 
@@ -382,7 +550,11 @@ fn analyze_tls_connection(
         let cipher_name = format!("{:?}", suite.suite());
         result.cipher_suite = Some(cipher_name.clone());
         if verbose {
-            println!("🔑 Cipher suite: {}", cipher_name);
+            println!(
+                "{} Cipher suite: {}",
+                color_config.emoji_or_text("🔑", "[CIPHER]"),
+                cipher_name
+            );
         }
     }
 
@@ -391,22 +563,27 @@ fn analyze_tls_connection(
         let version_str = format!("{:?}", version);
         result.tls_version = Some(version_str.clone());
         if verbose {
-            println!("📋 TLS version: {}", version_str);
+            println!(
+                "{} TLS version: {}",
+                color_config.emoji_or_text("📋", "[VERSION]"),
+                version_str
+            );
         }
     }
 
     // Extract key exchange information and check for quantum-secure algorithms
-    let (key_exchange, is_quantum_secure) = analyze_key_exchange(connection, verbose);
+    let (key_exchange, is_quantum_secure) = analyze_key_exchange(connection, verbose, color_config);
     result.key_exchange = Some(key_exchange);
     result.supports_quantum = is_quantum_secure;
 
     if verbose {
         println!(
-            "🛡️  Quantum-secure: {}",
+            "{} Quantum-secure: {}",
+            color_config.emoji_or_text("🛡️", "[SECURE]"),
             if result.supports_quantum {
-                "YES".green()
+                color_config.status_success("YES")
             } else {
-                "NO".red()
+                color_config.status_error("NO")
             }
         );
     }
@@ -414,7 +591,11 @@ fn analyze_tls_connection(
     result
 }
 
-fn analyze_key_exchange(connection: &rustls::ClientConnection, verbose: bool) -> (String, bool) {
+fn analyze_key_exchange(
+    connection: &rustls::ClientConnection,
+    verbose: bool,
+    color_config: &ColorConfig,
+) -> (String, bool) {
     // Try to extract key exchange information from the cipher suite
     let cipher_suite = connection.negotiated_cipher_suite();
     let protocol_version = connection.protocol_version();
@@ -451,7 +632,8 @@ fn analyze_key_exchange(connection: &rustls::ClientConnection, verbose: bool) ->
                 // access than rustls currently provides.
 
                 // For now, we can only make educated guesses based on what's available
-                is_quantum_secure = check_for_quantum_indicators(&suite_name, verbose);
+                is_quantum_secure =
+                    check_for_quantum_indicators(&suite_name, verbose, color_config);
             }
         }
     }
@@ -461,13 +643,21 @@ fn analyze_key_exchange(connection: &rustls::ClientConnection, verbose: bool) ->
     }
 
     if verbose && !key_exchange_info.contains("Unknown") {
-        println!("🔄 Key exchange: {}", key_exchange_info);
+        println!(
+            "{} Key exchange: {}",
+            color_config.emoji_or_text("🔄", "[KEY_EXCHANGE]"),
+            key_exchange_info
+        );
     }
 
     (key_exchange_info, is_quantum_secure)
 }
 
-fn check_for_quantum_indicators(cipher_suite_name: &str, verbose: bool) -> bool {
+fn check_for_quantum_indicators(
+    cipher_suite_name: &str,
+    verbose: bool,
+    color_config: &ColorConfig,
+) -> bool {
     // Note: This is a heuristic approach since rustls doesn't expose
     // the actual negotiated groups (like X25519MLKEM768).
     //
@@ -479,10 +669,14 @@ fn check_for_quantum_indicators(cipher_suite_name: &str, verbose: bool) -> bool 
 
     if verbose {
         println!(
-            "🔬 Analyzing cipher suite for quantum indicators: {}",
+            "{} Analyzing cipher suite for quantum indicators: {}",
+            color_config.emoji_or_text("🔬", "[ANALYZE]"),
             cipher_suite_name
         );
-        println!("⚠️  Note: Deep TLS inspection limited by rustls API");
+        println!(
+            "{} Note: Deep TLS inspection limited by rustls API",
+            color_config.emoji_or_text("⚠️", "[WARNING]")
+        );
     }
 
     // Look for any hints in the cipher suite name
@@ -492,7 +686,11 @@ fn check_for_quantum_indicators(cipher_suite_name: &str, verbose: bool) -> bool 
     for indicator in &quantum_indicators {
         if cipher_suite_name.to_uppercase().contains(indicator) {
             if verbose {
-                println!("🎯 Found potential quantum indicator: {}", indicator);
+                println!(
+                    "{} Found potential quantum indicator: {}",
+                    color_config.emoji_or_text("🎯", "[FOUND]"),
+                    indicator
+                );
             }
             return true;
         }
@@ -506,23 +704,50 @@ fn check_for_quantum_indicators(cipher_suite_name: &str, verbose: bool) -> bool 
     false
 }
 
-fn print_result(result: &ScanResult, verbose: bool) {
+fn print_result(result: &ScanResult, verbose: bool, color_config: &ColorConfig) {
     println!();
-    println!("{}", "🔍 Quantum Security Test Results".bold().blue());
-    println!("URL: {}", result.url.yellow());
+    if verbose {
+        println!(
+            "{} {}",
+            color_config.emoji_or_text("🔍", "[RESULTS]"),
+            color_config.header("Quantum Security Test Results")
+        );
+    } else {
+        let emoji = color_config.emoji_or_text("🔍", "");
+        if emoji.is_empty() {
+            println!("{}", color_config.header("Quantum Security Test Results"));
+        } else {
+            println!("{} {}", emoji, color_config.header("Quantum Security Test Results"));
+        }
+    }
+    println!("URL: {}", color_config.url_highlight(&result.url));
 
     if let Some(error) = &result.error {
-        println!("❌ Error: {}", error.red());
+        println!(
+            "{} Error: {}",
+            color_config.emoji_or_text("❌", "[ERROR]"),
+            color_config.status_error(error)
+        );
         return;
     }
 
-    let status = if result.supports_quantum {
-        "✅ SUPPORTED".green().bold()
+    let (status_emoji, status_text) = if result.supports_quantum {
+        ("✅", "SUPPORTED")
     } else {
-        "❌ NOT SUPPORTED".red().bold()
+        ("❌", "NOT SUPPORTED")
     };
 
-    println!("Quantum-secure encryption: {}", status);
+    let status_display = if result.supports_quantum {
+        color_config.status_success(status_text)
+    } else {
+        color_config.status_error(status_text)
+    };
+
+    println!(
+        "Quantum-secure encryption: {} {}",
+        color_config.emoji_or_text(status_emoji, ""),
+        status_display
+    );
 
     if verbose {
         if let Some(tls_version) = &result.tls_version {
@@ -544,19 +769,26 @@ fn print_result(result: &ScanResult, verbose: bool) {
         .as_ref()
         .is_some_and(|ke| ke.contains("Unknown from cipher"))
     {
-        println!("{}", "⚠️  Detection Limitations:".yellow().bold());
         println!(
-            "{}",
-            "   • Current TLS libraries have limited access to key exchange details".dimmed()
+            "{} {}",
+            color_config.emoji_or_text("⚠️", "[WARNING]"),
+            color_config.warning("Detection Limitations:")
         );
         println!(
             "{}",
-            "   • True X25519MLKEM768 detection requires deeper handshake inspection".dimmed()
+            color_config
+                .dimmed("   • Current TLS libraries have limited access to key exchange details")
         );
         println!(
             "{}",
-            "   • Deep analysis is the default - use --regular to force high-level analysis"
-                .dimmed()
+            color_config
+                .dimmed("   • True X25519MLKEM768 detection requires deeper handshake inspection")
+        );
+        println!(
+            "{}",
+            color_config.dimmed(
+                "   • Deep analysis is the default - use --regular to force high-level analysis"
+            )
         );
         println!();
     } else if verbose
@@ -565,18 +797,25 @@ fn print_result(result: &ScanResult, verbose: bool) {
             .as_ref()
             .is_some_and(|ke| ke.contains("(Quantum-Secure)") || ke.contains("(Classical)"))
     {
-        println!("{}", "✅ Deep Analysis Mode:".green().bold());
         println!(
-            "{}",
-            "   • Low-level TLS handshake inspection performed".dimmed()
+            "{} {}",
+            color_config.emoji_or_text("✅", "[INFO]"),
+            color_config.status_success("Deep Analysis Mode:")
         );
         println!(
             "{}",
-            "   • Actual key exchange algorithms detected from handshake messages".dimmed()
+            color_config.dimmed("   • Low-level TLS handshake inspection performed")
         );
         println!(
             "{}",
-            "   • Results show true negotiated algorithms, not library interpretations".dimmed()
+            color_config
+                .dimmed("   • Actual key exchange algorithms detected from handshake messages")
+        );
+        println!(
+            "{}",
+            color_config.dimmed(
+                "   • Results show true negotiated algorithms, not library interpretations"
+            )
         );
         println!();
     }
@@ -662,27 +901,65 @@ mod tests {
     #[test]
     fn test_quantum_indicators_detection() {
         // Test positive cases
-        assert!(check_for_quantum_indicators("TLS_MLKEM_AES_256", false));
+        assert!(check_for_quantum_indicators(
+            "TLS_MLKEM_AES_256",
+            false,
+            &ColorConfig { enabled: true }
+        ));
         assert!(check_for_quantum_indicators(
             "cipher_with_KYBER_support",
-            false
+            false,
+            &ColorConfig { enabled: true }
         ));
-        assert!(check_for_quantum_indicators("X25519MLKEM768_cipher", false));
-        assert!(check_for_quantum_indicators("HYBRID_key_exchange", false));
-        assert!(check_for_quantum_indicators("PQ_enabled_suite", false));
+        assert!(check_for_quantum_indicators(
+            "X25519MLKEM768_cipher",
+            false,
+            &ColorConfig { enabled: true }
+        ));
+        assert!(check_for_quantum_indicators(
+            "HYBRID_key_exchange",
+            false,
+            &ColorConfig { enabled: true }
+        ));
+        assert!(check_for_quantum_indicators(
+            "PQ_enabled_suite",
+            false,
+            &ColorConfig { enabled: true }
+        ));
 
         // Test case insensitivity
-        assert!(check_for_quantum_indicators("mlkem_cipher", false));
-        assert!(check_for_quantum_indicators("kyber_cipher", false));
+        assert!(check_for_quantum_indicators(
+            "mlkem_cipher",
+            false,
+            &ColorConfig { enabled: true }
+        ));
+        assert!(check_for_quantum_indicators(
+            "kyber_cipher",
+            false,
+            &ColorConfig { enabled: true }
+        ));
 
         // Test negative cases
         assert!(!check_for_quantum_indicators(
             "TLS_AES_256_GCM_SHA384",
-            false
+            false,
+            &ColorConfig { enabled: true }
         ));
-        assert!(!check_for_quantum_indicators("ECDHE_RSA_AES_256", false));
-        assert!(!check_for_quantum_indicators("classical_cipher", false));
-        assert!(!check_for_quantum_indicators("", false));
+        assert!(!check_for_quantum_indicators(
+            "ECDHE_RSA_AES_256",
+            false,
+            &ColorConfig { enabled: true }
+        ));
+        assert!(!check_for_quantum_indicators(
+            "classical_cipher",
+            false,
+            &ColorConfig { enabled: true }
+        ));
+        assert!(!check_for_quantum_indicators(
+            "",
+            false,
+            &ColorConfig { enabled: true }
+        ));
     }
 
     #[test]
