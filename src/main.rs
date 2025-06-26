@@ -204,6 +204,7 @@ async fn main() -> Result<()> {
         )
         .arg(
             Arg::new("no-color")
+                .short('n')
                 .long("no-color")
                 .help("Disable color and emoji output")
                 .action(clap::ArgAction::SetTrue),
@@ -1438,7 +1439,7 @@ mod tests {
     fn test_print_result_error_trailing_newline() {
         // This test documents that error output should end with a trailing newline
         // to prevent the shell prompt from appearing on the same line
-        
+
         let error_result = ScanResult::with_error(
             "https://google.colm".to_string(),
             "DNS resolution failed: failed to lookup address information: nodename nor servname provided, or not known".to_string(),
@@ -1449,17 +1450,17 @@ mod tests {
 
         // Test that error results should have consistent formatting
         // Both success and error cases should end with a trailing newline
-        
+
         // Note: This test documents the expected behavior.
         // The actual print_result function should add a trailing newline for error cases
         // to match the behavior of successful scans.
-        
+
         // These should not panic and should have consistent trailing newlines
         print_result(&error_result, false, &color_config);
         print_result(&error_result, true, &color_config);
         print_result(&error_result, false, &no_color_config);
         print_result(&error_result, true, &no_color_config);
-        
+
         // Success case for comparison (already has trailing newline)
         let success_result = ScanResult {
             version: "0.1.0".to_string(),
@@ -1470,7 +1471,7 @@ mod tests {
             key_exchange: Some("X25519 (Classical)".to_string()),
             error: None,
         };
-        
+
         print_result(&success_result, false, &color_config);
         print_result(&success_result, false, &no_color_config);
     }
