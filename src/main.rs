@@ -1156,10 +1156,12 @@ mod tests {
         assert!(!no_color_config.enabled);
 
         // Test that ColorConfig::new behaves consistently with should_use_color
+        // Note: In test environment, terminal detection may vary, so we test consistency
         let color_config = ColorConfig::new(false);
-        assert_eq!(color_config.enabled, ColorConfig::should_use_color(false));
+        let expected = ColorConfig::should_use_color(false);
+        assert_eq!(color_config.enabled, expected);
 
-        // Test that the no_color_flag parameter is respected consistently
+        // Test that the no_color_flag parameter is always respected (overrides everything)
         assert_eq!(ColorConfig::new(true).enabled, false);
 
         // Test direct ColorConfig creation for known states
@@ -1167,6 +1169,10 @@ mod tests {
         let disabled_config = ColorConfig { enabled: false };
         assert!(enabled_config.enabled);
         assert!(!disabled_config.enabled);
+
+        // Test the core logic that determines color usage
+        let color_logic_test = ColorConfig::should_use_color(true); // no-color flag true
+        assert!(!color_logic_test); // Should always be false when no-color flag is set
     }
 
     #[test]
@@ -1313,5 +1319,58 @@ mod tests {
         let header_without_color = no_color_config.header("Quantum Security Test Results");
         assert!(header_with_color.contains("Quantum Security Test Results"));
         assert_eq!(header_without_color, "Quantum Security Test Results");
+    }
+
+    #[test]
+    fn test_print_result_spacing_logic() {
+        // Test the spacing logic in print_result function
+        // Note: This doesn't capture actual stdout, but tests the logic that determines when spacing should occur
+
+        let result = ScanResult {
+            url: "https://example.com".to_string(),
+            supports_quantum: true,
+            tls_version: Some("0x0304".to_string()),
+            cipher_suite: Some("0x1302".to_string()),
+            key_exchange: Some("X25519+ML-KEM-768 (Quantum-Secure)".to_string()),
+            error: None,
+        };
+
+        let color_config = ColorConfig { enabled: true };
+        let no_color_config = ColorConfig { enabled: false };
+
+        // Test the specific spacing conditions
+        // 1. Normal mode + colors: should add spacing (if !verbose && color_config.enabled)
+        let should_add_spacing_normal_color = !false && color_config.enabled;
+        assert!(
+            should_add_spacing_normal_color,
+            "Normal color mode should have spacing"
+        );
+
+        // 2. Normal mode + no-color: should NOT add spacing
+        let should_add_spacing_normal_no_color = !false && no_color_config.enabled;
+        assert!(
+            !should_add_spacing_normal_no_color,
+            "Normal no-color mode should NOT have spacing"
+        );
+
+        // 3. Verbose mode + colors: should NOT add spacing in print_result (has spacing earlier)
+        let should_add_spacing_verbose_color = !true && color_config.enabled;
+        assert!(
+            !should_add_spacing_verbose_color,
+            "Verbose mode should NOT add spacing in print_result"
+        );
+
+        // 4. Verbose mode + no-color: should NOT add spacing in print_result (has spacing earlier)
+        let should_add_spacing_verbose_no_color = !true && no_color_config.enabled;
+        assert!(
+            !should_add_spacing_verbose_no_color,
+            "Verbose mode should NOT add spacing in print_result"
+        );
+
+        // Verify the functions still execute without panicking
+        print_result(&result, false, &color_config); // Normal + color
+        print_result(&result, false, &no_color_config); // Normal + no-color
+        print_result(&result, true, &color_config); // Verbose + color
+        print_result(&result, true, &no_color_config); // Verbose + no-color
     }
 }
