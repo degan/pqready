@@ -559,10 +559,11 @@ fn print_result(result: &ScanResult, verbose: bool) {
                 .dimmed()
         );
         println!();
-    } else if result
-        .key_exchange
-        .as_ref()
-        .is_some_and(|ke| ke.contains("(Quantum-Secure)") || ke.contains("(Classical)"))
+    } else if verbose
+        && result
+            .key_exchange
+            .as_ref()
+            .is_some_and(|ke| ke.contains("(Quantum-Secure)") || ke.contains("(Classical)"))
     {
         println!("{}", "✅ Deep Analysis Mode:".green().bold());
         println!(
