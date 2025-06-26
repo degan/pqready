@@ -3,7 +3,7 @@
 # Project information
 PROJECT_NAME := pqready
 BINARY_NAME := pqready
-VERSION := 0.1.1
+VERSION := $(shell grep '^version =' Cargo.toml | head -n1 | sed 's/version = "\(.*\)"/\1/')
 
 # Default target
 .PHONY: all
