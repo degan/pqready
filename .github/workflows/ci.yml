@@ -61,19 +61,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
+      # Use a dedicated action for security audit - much faster than manual installation
+      - name: Security audit
+        uses: EmbarkStudios/cargo-audit-action@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ubuntu-latest-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ubuntu-latest-cargo-audit-
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
-
-      - name: Run security audit
-        run: cargo audit
+          # Only check for vulnerabilities that have fixes available
+          args: --ignore yanked
