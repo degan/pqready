@@ -47,6 +47,11 @@ clippy:
 	@echo "📎 Running clippy..."
 	cargo clippy -- -D warnings
 
+.PHONY: clippy-all
+clippy-all:
+	@echo "📎 Running clippy (all targets and features)..."
+	cargo clippy --all-targets --all-features -- -D warnings
+
 .PHONY: fmt
 fmt:
 	@echo "🎨 Formatting code..."
@@ -158,10 +163,10 @@ publish-dirty: ci publish-check-dirty
 
 # Development workflow
 .PHONY: dev
-dev: fmt clippy test build
+dev: fmt clippy-all test build
 
 .PHONY: ci
-ci: fmt-check clippy test build
+ci: fmt-check clippy-all test build
 
 # Demo targets
 .PHONY: demo
@@ -200,6 +205,7 @@ help:
 	@echo "  test-verbose  Run tests with verbose output"
 	@echo "  check         Check code without building"
 	@echo "  clippy        Run clippy linter"
+	@echo "  clippy-all    Run clippy linter (all targets and features)"
 	@echo "  fmt           Format code"
 	@echo "  fmt-check     Check code formatting"
 	@echo "  run           Run with example URL"
