@@ -1140,4 +1140,153 @@ mod tests {
         assert!(json.contains("\"error\":\"Connection refused\""));
         assert!(json.contains("\"supports_quantum\":false"));
     }
+
+    #[test]
+    fn test_color_config_creation() {
+        // Test color disabled (no-color flag true) - should always be disabled
+        let no_color_config = ColorConfig::new(true);
+        assert!(!no_color_config.enabled);
+
+        // Test that ColorConfig::new behaves consistently with should_use_color
+        let color_config = ColorConfig::new(false);
+        assert_eq!(color_config.enabled, ColorConfig::should_use_color(false));
+        
+        // Test that the no_color_flag parameter is respected
+        assert_eq!(ColorConfig::new(true).enabled, false);
+        assert_eq!(ColorConfig::new(false).enabled, ColorConfig::should_use_color(false));
+    }
+
+    #[test]
+    fn test_color_config_environment_variables() {
+        // Test NO_COLOR environment variable
+        std::env::set_var("NO_COLOR", "1");
+        let should_use_color = ColorConfig::should_use_color(false);
+        assert!(!should_use_color);
+        std::env::remove_var("NO_COLOR");
+
+        // Test TERM=dumb environment variable
+        std::env::set_var("TERM", "dumb");
+        let should_use_color = ColorConfig::should_use_color(false);
+        assert!(!should_use_color);
+        std::env::remove_var("TERM");
+
+        // Test normal case (no environment variables)
+        let should_use_color = ColorConfig::should_use_color(false);
+        // This will depend on whether we're running in a terminal, but we can test the logic
+        let expected = std::io::IsTerminal::is_terminal(&std::io::stdout());
+        assert_eq!(should_use_color, expected);
+    }
+
+    #[test]
+    fn test_emoji_or_text_functionality() {
+        // Test with colors enabled
+        let color_config = ColorConfig { enabled: true };
+        assert_eq!(color_config.emoji_or_text("🔍", "[SCAN]"), "🔍");
+        assert_eq!(color_config.emoji_or_text("✅", "[SUCCESS]"), "✅");
+        assert_eq!(color_config.emoji_or_text("❌", "[ERROR]"), "❌");
+        assert_eq!(color_config.emoji_or_text("🔍", ""), "🔍");
+
+        // Test with colors disabled
+        let no_color_config = ColorConfig { enabled: false };
+        assert_eq!(no_color_config.emoji_or_text("🔍", "[SCAN]"), "[SCAN]");
+        assert_eq!(no_color_config.emoji_or_text("✅", "[SUCCESS]"), "[SUCCESS]");
+        assert_eq!(no_color_config.emoji_or_text("❌", "[ERROR]"), "[ERROR]");
+        assert_eq!(no_color_config.emoji_or_text("🔍", ""), "");
+    }
+
+    #[test]
+    fn test_color_styling_methods() {
+        let color_config = ColorConfig { enabled: true };
+        let no_color_config = ColorConfig { enabled: false };
+
+        // Test that no-color config returns plain text
+        assert_eq!(no_color_config.status_success("SUPPORTED"), "SUPPORTED");
+        assert_eq!(no_color_config.status_error("NOT SUPPORTED"), "NOT SUPPORTED");
+        assert_eq!(no_color_config.header("Test Header"), "Test Header");
+        assert_eq!(no_color_config.url_highlight("https://example.com"), "https://example.com");
+        assert_eq!(no_color_config.warning("Warning message"), "Warning message");
+        assert_eq!(no_color_config.dimmed("Dimmed text"), "Dimmed text");
+
+        // Test that color config methods don't crash and return strings
+        // Note: The actual color codes may not be applied in testing environment
+        let success_colored = color_config.status_success("SUPPORTED");
+        let error_colored = color_config.status_error("NOT SUPPORTED");
+        let header_colored = color_config.header("Test Header");
+        let url_colored = color_config.url_highlight("https://example.com");
+        let warning_colored = color_config.warning("Warning message");
+        let dimmed_colored = color_config.dimmed("Dimmed text");
+
+        // Verify they return strings (they may be the same as plain text in test environment)
+        assert!(success_colored.contains("SUPPORTED"));
+        assert!(error_colored.contains("NOT SUPPORTED"));
+        assert!(header_colored.contains("Test Header"));
+        assert!(url_colored.contains("https://example.com"));
+        assert!(warning_colored.contains("Warning message"));
+        assert!(dimmed_colored.contains("Dimmed text"));
+    }
+
+    #[test]
+    fn test_print_result_output_formatting() {
+        // Test basic scan result
+        let result = ScanResult {
+            url: "https://example.com".to_string(),
+            supports_quantum: true,
+            tls_version: Some("0x0304".to_string()),
+            cipher_suite: Some("0x1302".to_string()),
+            key_exchange: Some("X25519+ML-KEM-768 (Quantum-Secure)".to_string()),
+            error: None,
+        };
+
+        // Test that the result formatting doesn't crash with different configurations
+        let color_config = ColorConfig { enabled: true };
+        let no_color_config = ColorConfig { enabled: false };
+
+        // These should not panic
+        print_result(&result, false, &color_config);
+        print_result(&result, true, &color_config);
+        print_result(&result, false, &no_color_config);
+        print_result(&result, true, &no_color_config);
+
+        // Test error result
+        let error_result = ScanResult::with_error(
+            "https://example.com".to_string(),
+            "Connection failed".to_string(),
+        );
+
+        // These should not panic
+        print_result(&error_result, false, &color_config);
+        print_result(&error_result, true, &color_config);
+        print_result(&error_result, false, &no_color_config);
+        print_result(&error_result, true, &no_color_config);
+    }
+
+    #[test]
+    fn test_verbose_mode_header_behavior() {
+        // Test that verbose and non-verbose modes show correct headers
+        let color_config = ColorConfig { enabled: true };
+        let no_color_config = ColorConfig { enabled: false };
+
+        // Test emoji_or_text behavior for headers in different modes
+        // Normal mode (non-verbose) - should show emoji when colors enabled
+        let normal_with_color = color_config.emoji_or_text("🔍", "");
+        assert_eq!(normal_with_color, "🔍");
+
+        // Normal mode (non-verbose) - should show empty string when colors disabled
+        let normal_without_color = no_color_config.emoji_or_text("🔍", "");
+        assert_eq!(normal_without_color, "");
+
+        // Verbose mode - should show emoji when colors enabled  
+        let verbose_with_color = color_config.emoji_or_text("🔍", "[RESULTS]");
+        assert_eq!(verbose_with_color, "🔍");
+
+        // Verbose mode - should show [RESULTS] when colors disabled
+        let verbose_without_color = no_color_config.emoji_or_text("🔍", "[RESULTS]");
+        assert_eq!(verbose_without_color, "[RESULTS]");
+
+        // Test the header text is always the same
+        let header_with_color = color_config.header("Quantum Security Test Results");
+        let header_without_color = no_color_config.header("Quantum Security Test Results");
+        assert!(header_with_color.contains("Quantum Security Test Results"));
+        assert_eq!(header_without_color, "Quantum Security Test Results");
+    }
 }
