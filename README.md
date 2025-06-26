@@ -23,21 +23,32 @@ Based on Apple's quantum-secure encryption specifications from [iOS 26, iPadOS 2
 Download the latest release for your platform from [GitHub Releases](https://github.com/degan/pqready/releases):
 
 #### macOS
+1. Download `pqready-macos` from the [releases page](https://github.com/degan/pqready/releases)
+2. Open Terminal and navigate to your Downloads folder
+3. Remove quarantine and run/install:
 ```bash
-# install
+# Remove macOS quarantine (required for unsigned binaries)
 chmod +x pqready
-sudo mv pqready /usr/local/bin/
+xattr -d com.apple.quarantine pqready
+./pqready example.com
+# optional
+sudo mv pqready /usr/local/bin/pqready
 ```
 
 #### Linux
+1. Download `pqready` from the [releases page](https://github.com/degan/pqready/releases)  
+2. Open a terminal and navigate to your downloads folder
+3. Make executable and run/install:
 ```bash
 # install
 chmod +x pqready
+./pqready example.com
+# optional
 sudo mv pqready /usr/local/bin/
 ```
 
 #### Windows
-Download `pqready-windows.exe` from the [releases page](https://github.com/degan/pqready/releases) and add it to your PATH.
+Download `pqready.exe` from the [releases page](https://github.com/degan/pqready/releases) and (OPTIONAL) add it to your PATH.
 
 ### Install from Cargo
 
