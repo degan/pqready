@@ -233,7 +233,7 @@ async fn main() -> Result<()> {
         }
         Err(_) => {
             // Try adding https:// prefix
-            let with_https = format!("https://{}", url_str);
+            let with_https = format!("https://{url_str}");
             match Url::parse(&with_https) {
                 Ok(u) => u,
                 Err(e) => return Err(anyhow!("Invalid URL format '{}': {}", url_str, e)),
@@ -249,7 +249,7 @@ async fn main() -> Result<()> {
             color_config.header("Quantum Security Scanner")
         );
         println!("Testing: {}", color_config.url_highlight(url.as_str()));
-        println!("Timeout: {}s", timeout);
+        println!("Timeout: {timeout}s");
         println!();
     }
 
@@ -303,7 +303,7 @@ async fn scan_quantum_support_deep(
     }
 
     // Resolve hostname
-    let addr = match format!("{}:{}", host, port).to_socket_addrs() {
+    let addr = match format!("{host}:{port}").to_socket_addrs() {
         Ok(mut addrs) => match addrs.next() {
             Some(addr) => addr,
             None => {
@@ -314,7 +314,7 @@ async fn scan_quantum_support_deep(
             }
         },
         Err(e) => {
-            return ScanResult::with_error(url.to_string(), format!("DNS resolution failed: {}", e))
+            return ScanResult::with_error(url.to_string(), format!("DNS resolution failed: {e}"))
         }
     };
 
@@ -331,7 +331,7 @@ async fn scan_quantum_support_deep(
         match StdTcpStream::connect_timeout(&addr, std::time::Duration::from_secs(timeout_secs)) {
             Ok(stream) => stream,
             Err(e) => {
-                return ScanResult::with_error(url.to_string(), format!("Connection failed: {}", e))
+                return ScanResult::with_error(url.to_string(), format!("Connection failed: {e}"))
             }
         };
 
@@ -348,7 +348,7 @@ async fn scan_quantum_support_deep(
         Err(e) => {
             return ScanResult::with_error(
                 url.to_string(),
-                format!("Failed to create TLS inspector: {}", e),
+                format!("Failed to create TLS inspector: {e}"),
             )
         }
     };
@@ -359,7 +359,7 @@ async fn scan_quantum_support_deep(
             Err(e) => {
                 return ScanResult::with_error(
                     url.to_string(),
-                    format!("TLS handshake analysis failed: {}", e),
+                    format!("TLS handshake analysis failed: {e}"),
                 )
             }
         };
@@ -369,11 +369,11 @@ async fn scan_quantum_support_deep(
     result.supports_quantum = handshake_info.supports_quantum;
 
     if let Some(version) = handshake_info.negotiated_version {
-        result.tls_version = Some(format!("0x{:04x}", version));
+        result.tls_version = Some(format!("0x{version:04x}"));
     }
 
     if let Some(cipher) = handshake_info.cipher_suite {
-        result.cipher_suite = Some(format!("0x{:04x}", cipher));
+        result.cipher_suite = Some(format!("0x{cipher:04x}"));
     }
 
     if let Some(group) = handshake_info.server_selected_group {
@@ -434,7 +434,7 @@ async fn scan_quantum_support(
     let connector = TlsConnector::from(Arc::new(config));
 
     // Resolve hostname
-    let addr = match format!("{}:{}", host, port).to_socket_addrs() {
+    let addr = match format!("{host}:{port}").to_socket_addrs() {
         Ok(mut addrs) => match addrs.next() {
             Some(addr) => addr,
             None => {
@@ -445,7 +445,7 @@ async fn scan_quantum_support(
             }
         },
         Err(e) => {
-            return ScanResult::with_error(url.to_string(), format!("DNS resolution failed: {}", e))
+            return ScanResult::with_error(url.to_string(), format!("DNS resolution failed: {e}"))
         }
     };
 
@@ -466,7 +466,7 @@ async fn scan_quantum_support(
     {
         Ok(Ok(stream)) => stream,
         Ok(Err(e)) => {
-            return ScanResult::with_error(url.to_string(), format!("Connection failed: {}", e))
+            return ScanResult::with_error(url.to_string(), format!("Connection failed: {e}"))
         }
         Err(_) => return ScanResult::with_error(url.to_string(), "Connection timeout".to_string()),
     };
@@ -482,7 +482,7 @@ async fn scan_quantum_support(
     let server_name = match rustls::ServerName::try_from(host) {
         Ok(name) => name,
         Err(e) => {
-            return ScanResult::with_error(url.to_string(), format!("Invalid server name: {}", e))
+            return ScanResult::with_error(url.to_string(), format!("Invalid server name: {e}"))
         }
     };
 
@@ -494,7 +494,7 @@ async fn scan_quantum_support(
     {
         Ok(Ok(stream)) => stream,
         Ok(Err(e)) => {
-            return ScanResult::with_error(url.to_string(), format!("TLS handshake failed: {}", e))
+            return ScanResult::with_error(url.to_string(), format!("TLS handshake failed: {e}"))
         }
         Err(_) => {
             return ScanResult::with_error(url.to_string(), "TLS handshake timeout".to_string())
@@ -561,7 +561,7 @@ fn analyze_tls_connection(
 
     // Get protocol version
     if let Some(version) = connection.protocol_version() {
-        let version_str = format!("{:?}", version);
+        let version_str = format!("{version:?}");
         result.tls_version = Some(version_str.clone());
         if verbose {
             println!(
@@ -625,7 +625,7 @@ fn analyze_key_exchange(
 
         // Check for TLS 1.3 (required for quantum-secure algorithms)
         if let Some(version) = protocol_version {
-            if format!("{:?}", version) == "TLSv1_3" {
+            if format!("{version:?}") == "TLSv1_3" {
                 key_exchange_info.push_str(" (TLS 1.3)");
 
                 // In TLS 1.3, we would need to inspect the actual key_share extension
@@ -759,13 +759,13 @@ fn print_result(result: &ScanResult, verbose: bool, color_config: &ColorConfig) 
 
     if verbose {
         if let Some(tls_version) = &result.tls_version {
-            println!("TLS Version: {}", tls_version);
+            println!("TLS Version: {tls_version}");
         }
         if let Some(cipher_suite) = &result.cipher_suite {
-            println!("Cipher Suite: {}", cipher_suite);
+            println!("Cipher Suite: {cipher_suite}");
         }
         if let Some(key_exchange) = &result.key_exchange {
-            println!("Key Exchange: {}", key_exchange);
+            println!("Key Exchange: {key_exchange}");
         }
     }
 
@@ -1084,8 +1084,7 @@ mod tests {
 
             assert_eq!(
                 result.supports_quantum, expected_quantum,
-                "Failed for key exchange: {}",
-                key_exchange
+                "Failed for key exchange: {key_exchange}"
             );
         }
     }
@@ -1101,7 +1100,7 @@ mod tests {
         ];
 
         for (input, _expected) in test_urls {
-            let normalized = format!("https://{}", input);
+            let normalized = format!("https://{input}");
             let url = Url::parse(&normalized).unwrap();
             assert!(
                 url.as_str().starts_with("https://"),
@@ -1162,7 +1161,7 @@ mod tests {
         assert_eq!(color_config.enabled, expected);
 
         // Test that the no_color_flag parameter is always respected (overrides everything)
-        assert_eq!(ColorConfig::new(true).enabled, false);
+        assert!(!ColorConfig::new(true).enabled);
 
         // Test direct ColorConfig creation for known states
         let enabled_config = ColorConfig { enabled: true };
@@ -1340,28 +1339,28 @@ mod tests {
 
         // Test the specific spacing conditions
         // 1. Normal mode + colors: should add spacing (if !verbose && color_config.enabled)
-        let should_add_spacing_normal_color = !false && color_config.enabled;
+        let should_add_spacing_normal_color = color_config.enabled;
         assert!(
             should_add_spacing_normal_color,
             "Normal color mode should have spacing"
         );
 
         // 2. Normal mode + no-color: should NOT add spacing
-        let should_add_spacing_normal_no_color = !false && no_color_config.enabled;
+        let should_add_spacing_normal_no_color = no_color_config.enabled;
         assert!(
             !should_add_spacing_normal_no_color,
             "Normal no-color mode should NOT have spacing"
         );
 
         // 3. Verbose mode + colors: should NOT add spacing in print_result (has spacing earlier)
-        let should_add_spacing_verbose_color = !true && color_config.enabled;
+        let should_add_spacing_verbose_color = false;
         assert!(
             !should_add_spacing_verbose_color,
             "Verbose mode should NOT add spacing in print_result"
         );
 
         // 4. Verbose mode + no-color: should NOT add spacing in print_result (has spacing earlier)
-        let should_add_spacing_verbose_no_color = !true && no_color_config.enabled;
+        let should_add_spacing_verbose_no_color = false;
         assert!(
             !should_add_spacing_verbose_no_color,
             "Verbose mode should NOT add spacing in print_result"

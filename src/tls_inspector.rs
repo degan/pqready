@@ -103,7 +103,7 @@ impl TlsInspector {
                 color_config.emoji_or_text("🔍", "[DETAILS]")
             );
             println!("   • Total size: {} bytes", client_hello.len());
-            println!("   • Hostname: {}", hostname);
+            println!("   • Hostname: {hostname}");
             println!("   • Client offering groups: X25519+ML-KEM-768 (0x11ec), X25519+Kyber768-Draft00 (0x6399), X25519 (0x001d)");
         }
 
@@ -337,7 +337,7 @@ impl TlsInspector {
         if bytes_read < 5 {
             let hex_data = buffer[..bytes_read]
                 .iter()
-                .map(|b| format!("{:02x}", b))
+                .map(|b| format!("{b:02x}"))
                 .collect::<Vec<_>>()
                 .join(" ");
             return Err(anyhow!(
@@ -834,7 +834,7 @@ pub fn format_group_name(group: u16) -> String {
         0x0017 => "secp256r1 (Classical)".to_string(),
         0x0018 => "secp384r1 (Classical)".to_string(),
         0x0019 => "secp521r1 (Classical)".to_string(),
-        _ => format!("Unknown Group (0x{:04x})", group),
+        _ => format!("Unknown Group (0x{group:04x})"),
     }
 }
 
