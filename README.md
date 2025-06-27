@@ -121,9 +121,9 @@ Options:
 ```bash
 $ pqready https://google.com
 
-🔍 Quantum Security Test Results
-URL: https://google.com/
-Quantum-secure encryption: ❌ NOT SUPPORTED
+🔍 Quantum Security Test Results vX.X.X
+URL: https://google.com
+Quantum-secure encryption: ✅ SUPPORTED
 ```
 
 #### Verbose Output
@@ -131,36 +131,65 @@ Quantum-secure encryption: ❌ NOT SUPPORTED
 $ pqready -v https://example.com
 
 🔍 Quantum Security Scanner
-Testing: https://example.com/
+Testing: https://example.com
 Timeout: 10s
 
+🔬 Starting DEEP quantum security analysis
 🔌 Connecting to example.com:443
-📡 Resolved to: 93.184.216.34:443
+📡 Resolved to: 96.7.128.198:443
 🤝 TCP connection established
-🔐 TLS handshake completed
-🔑 Cipher suite: TLS13_AES_256_GCM_SHA384
-📋 TLS version: TLSv1_3
-🛡️  Quantum-secure: NO
+🔬 Starting low-level TLS handshake analysis
+📤 Sending ClientHello with quantum-secure groups
+🔍 ClientHello details:
+   • Total size: 157 bytes
+   • Hostname: example.com
+   • Client offering groups: X25519+ML-KEM-768 (0x11ec), X25519+Kyber768-Draft00 (0x6399), X25519 (0x001d)
+✅ ClientHello sent successfully
+📥 Reading server response...
+📦 Received 2690 bytes from server
+🤝 Handshake message: type=02, length=86
+🔒 ServerHello version: 0303
+🔑 Selected cipher suite: 1302
+🗝️ Server selected group: 001d (key length: 32)
+🛡️ No quantum-secure encryption detected
+🔧 Using classical key exchange: 001d
+🔬 Deep analysis complete!
 
-🔍 Quantum Security Test Results
-URL: https://example.com/
+🔍 Quantum Security Test Results v0.X.X
+URL: https://example.com
 Quantum-secure encryption: ❌ NOT SUPPORTED
-TLS Version: TLSv1_3
-Cipher Suite: TLS13_AES_256_GCM_SHA384
-Key Exchange: Unknown
+TLS Version: 0x0304
+Cipher Suite: 0x1302
+Key Exchange: X25519 (Classical)
+
+✅ Deep Analysis Mode:
+   • Low-level TLS handshake inspection performed
+   • Actual key exchange algorithms detected from handshake messages
+   • Results show true negotiated algorithms, not library interpretations
 ```
 
 #### JSON Output
 ```bash
 $ pqready -j https://example.com
 {
+  "version": "X.X.X",
   "url": "https://example.com/",
   "supports_quantum": false,
-  "tls_version": "TLSv1_3",
-  "cipher_suite": "TLS13_AES_256_GCM_SHA384",
-  "key_exchange": "Unknown",
+  "tls_version": "0x0304",
+  "cipher_suite": "0x1302",
+  "key_exchange": "X25519 (Classical)",
   "error": null
 }
+```
+
+#### Windows Example
+```cmd
+# Download pqready.exe and run from command prompt
+C:\Downloads> pqready.exe example.com
+
+🔍 Quantum Security Test Results
+URL: https://example.com/
+Quantum-secure encryption: ❌ NOT SUPPORTED
 ```
 
 ## Technical Details
