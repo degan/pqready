@@ -585,7 +585,7 @@ fn analyze_tls_connection(
     if verbose {
         println!(
             "{} Quantum-secure: {}",
-            color_config.emoji_or_text("🛡️", "[SECURE]"),
+            color_config.emoji_or_text("🎯", "[SECURE]"),
             if result.supports_quantum {
                 color_config.status_success("YES")
             } else {

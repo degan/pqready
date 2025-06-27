@@ -719,7 +719,7 @@ impl TlsInspector {
             if quantum_support {
                 println!(
                     "{} QUANTUM-SECURE ENCRYPTION DETECTED!",
-                    color_config.emoji_or_text("🛡️", "[SECURE]")
+                    color_config.emoji_or_text("🎯", "[SECURE]")
                 );
                 println!(
                     "{} X25519+ML-KEM-768 hybrid key exchange is active",
@@ -728,7 +728,7 @@ impl TlsInspector {
             } else {
                 println!(
                     "{} No quantum-secure encryption detected",
-                    color_config.emoji_or_text("🛡️", "[NOT_SECURE]")
+                    color_config.emoji_or_text("🎯", "[NOT_SECURE]")
                 );
                 if let Some(group) = self.handshake_info.server_selected_group {
                     println!(
