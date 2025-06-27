@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed 
+- Updated TLS version and cipher suite output to be human readable
+
 ## [0.1.1] - 2025-06-26
 
 ### Added
