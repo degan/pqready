@@ -23,7 +23,7 @@ Based on Apple's quantum-secure encryption specifications from [iOS 26, iPadOS 2
 Download the latest release for your platform from [GitHub Releases](https://github.com/degan/pqready/releases):
 
 #### macOS
-1. Download `pqready-macos` from the [releases page](https://github.com/degan/pqready/releases)
+1. Download `pqready` from the [releases page](https://github.com/degan/pqready/releases)
 2. Open Terminal and navigate to your Downloads folder
 3. Remove quarantine and run/install:
 ```bash
