@@ -158,8 +158,8 @@ Timeout: 10s
 🔍 Quantum Security Test Results v0.X.X
 URL: https://example.com
 Quantum-secure encryption: ❌ NOT SUPPORTED
-TLS Version: 0x0304
-Cipher Suite: 0x1302
+TLS Version: TLS 1.3
+Cipher Suite: TLS_AES_256_GCM_SHA384
 Key Exchange: X25519 (Classical)
 
 ✅ Deep Analysis Mode:
@@ -175,8 +175,8 @@ $ pqready -j https://example.com
   "version": "X.X.X",
   "url": "https://example.com/",
   "supports_quantum": false,
-  "tls_version": "0x0304",
-  "cipher_suite": "0x1302",
+  "tls_version": "TLS 1.3",
+  "cipher_suite": "TLS_AES_256_GCM_SHA384",
   "key_exchange": "X25519 (Classical)",
   "error": null
 }
@@ -187,7 +187,7 @@ $ pqready -j https://example.com
 # Download pqready.exe and run from command prompt
 C:\Downloads> pqready.exe example.com
 
-🔍 Quantum Security Test Results
+🔍 Quantum Security Test Results vX.X.X
 URL: https://example.com/
 Quantum-secure encryption: ❌ NOT SUPPORTED
 ```

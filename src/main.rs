@@ -374,11 +374,11 @@ async fn scan_quantum_support_deep(
     result.supports_quantum = handshake_info.supports_quantum;
 
     if let Some(version) = handshake_info.negotiated_version {
-        result.tls_version = Some(format!("0x{version:04x}"));
+        result.tls_version = Some(format_tls_version(version));
     }
 
     if let Some(cipher) = handshake_info.cipher_suite {
-        result.cipher_suite = Some(format!("0x{cipher:04x}"));
+        result.cipher_suite = Some(format_cipher_suite(cipher));
     }
 
     if let Some(group) = handshake_info.server_selected_group {
@@ -657,6 +657,37 @@ fn analyze_key_exchange(
     }
 
     (key_exchange_info, is_quantum_secure)
+}
+
+fn format_tls_version(version: u16) -> String {
+    match version {
+        0x0304 => "TLS 1.3".to_string(),
+        0x0303 => "TLS 1.2".to_string(),
+        0x0302 => "TLS 1.1".to_string(),
+        0x0301 => "TLS 1.0".to_string(),
+        _ => format!("TLS (0x{version:04x})"),
+    }
+}
+
+fn format_cipher_suite(cipher: u16) -> String {
+    match cipher {
+        0x1301 => "TLS_AES_128_GCM_SHA256".to_string(),
+        0x1302 => "TLS_AES_256_GCM_SHA384".to_string(),
+        0x1303 => "TLS_CHACHA20_POLY1305_SHA256".to_string(),
+        0x002f => "TLS_RSA_WITH_AES_128_CBC_SHA".to_string(),
+        0x0035 => "TLS_RSA_WITH_AES_256_CBC_SHA".to_string(),
+        0x003c => "TLS_RSA_WITH_AES_128_CBC_SHA256".to_string(),
+        0x003d => "TLS_RSA_WITH_AES_256_CBC_SHA256".to_string(),
+        0x009c => "TLS_RSA_WITH_AES_128_GCM_SHA256".to_string(),
+        0x009d => "TLS_RSA_WITH_AES_256_GCM_SHA384".to_string(),
+        0xc02f => "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256".to_string(),
+        0xc030 => "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384".to_string(),
+        0xcca8 => "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256".to_string(),
+        0xcca9 => "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256".to_string(),
+        0xc02b => "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256".to_string(),
+        0xc02c => "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384".to_string(),
+        _ => format!("TLS_CIPHER (0x{cipher:04x})"),
+    }
 }
 
 fn check_for_quantum_indicators(
@@ -1058,12 +1089,12 @@ mod tests {
         let mut result = ScanResult::new("https://test.com".to_string());
 
         // Test TLS 1.3 version
-        result.tls_version = Some("0x0304".to_string());
-        assert_eq!(result.tls_version, Some("0x0304".to_string()));
+        result.tls_version = Some("TLS 1.3".to_string());
+        assert_eq!(result.tls_version, Some("TLS 1.3".to_string()));
 
         // Test TLS 1.2 version
-        result.tls_version = Some("0x0303".to_string());
-        assert_eq!(result.tls_version, Some("0x0303".to_string()));
+        result.tls_version = Some("TLS 1.2".to_string());
+        assert_eq!(result.tls_version, Some("TLS 1.2".to_string()));
     }
 
     #[test]
@@ -1071,14 +1102,56 @@ mod tests {
         let mut result = ScanResult::new("https://test.com".to_string());
 
         // Test TLS 1.3 cipher suites
-        result.cipher_suite = Some("0x1301".to_string()); // TLS_AES_128_GCM_SHA256
-        assert_eq!(result.cipher_suite, Some("0x1301".to_string()));
+        result.cipher_suite = Some("TLS_AES_128_GCM_SHA256".to_string());
+        assert_eq!(
+            result.cipher_suite,
+            Some("TLS_AES_128_GCM_SHA256".to_string())
+        );
 
-        result.cipher_suite = Some("0x1302".to_string()); // TLS_AES_256_GCM_SHA384
-        assert_eq!(result.cipher_suite, Some("0x1302".to_string()));
+        result.cipher_suite = Some("TLS_AES_256_GCM_SHA384".to_string());
+        assert_eq!(
+            result.cipher_suite,
+            Some("TLS_AES_256_GCM_SHA384".to_string())
+        );
 
-        result.cipher_suite = Some("0x1303".to_string()); // TLS_CHACHA20_POLY1305_SHA256
-        assert_eq!(result.cipher_suite, Some("0x1303".to_string()));
+        result.cipher_suite = Some("TLS_CHACHA20_POLY1305_SHA256".to_string());
+        assert_eq!(
+            result.cipher_suite,
+            Some("TLS_CHACHA20_POLY1305_SHA256".to_string())
+        );
+    }
+
+    #[test]
+    fn test_format_tls_version() {
+        // Test known TLS versions
+        assert_eq!(format_tls_version(0x0304), "TLS 1.3");
+        assert_eq!(format_tls_version(0x0303), "TLS 1.2");
+        assert_eq!(format_tls_version(0x0302), "TLS 1.1");
+        assert_eq!(format_tls_version(0x0301), "TLS 1.0");
+
+        // Test unknown version
+        assert_eq!(format_tls_version(0x9999), "TLS (0x9999)");
+    }
+
+    #[test]
+    fn test_format_cipher_suite() {
+        // Test TLS 1.3 cipher suites
+        assert_eq!(format_cipher_suite(0x1301), "TLS_AES_128_GCM_SHA256");
+        assert_eq!(format_cipher_suite(0x1302), "TLS_AES_256_GCM_SHA384");
+        assert_eq!(format_cipher_suite(0x1303), "TLS_CHACHA20_POLY1305_SHA256");
+
+        // Test some TLS 1.2 cipher suites
+        assert_eq!(
+            format_cipher_suite(0xc02f),
+            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        );
+        assert_eq!(
+            format_cipher_suite(0xc030),
+            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        );
+
+        // Test unknown cipher suite
+        assert_eq!(format_cipher_suite(0x9999), "TLS_CIPHER (0x9999)");
     }
 
     #[test]
@@ -1132,8 +1205,8 @@ mod tests {
             version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: false,
-            tls_version: Some("0x0304".to_string()),
-            cipher_suite: Some("0x1302".to_string()),
+            tls_version: Some("TLS 1.3".to_string()),
+            cipher_suite: Some("TLS_AES_256_GCM_SHA384".to_string()),
             key_exchange: Some("X25519 (Classical)".to_string()),
             error: None,
         };
@@ -1281,8 +1354,8 @@ mod tests {
             version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: true,
-            tls_version: Some("0x0304".to_string()),
-            cipher_suite: Some("0x1302".to_string()),
+            tls_version: Some("TLS 1.3".to_string()),
+            cipher_suite: Some("TLS_AES_256_GCM_SHA384".to_string()),
             key_exchange: Some("X25519+ML-KEM-768 (Quantum-Secure)".to_string()),
             error: None,
         };
@@ -1349,8 +1422,8 @@ mod tests {
             version: "0.1.0".to_string(),
             url: "https://example.com".to_string(),
             supports_quantum: true,
-            tls_version: Some("0x0304".to_string()),
-            cipher_suite: Some("0x1302".to_string()),
+            tls_version: Some("TLS 1.3".to_string()),
+            cipher_suite: Some("TLS_AES_256_GCM_SHA384".to_string()),
             key_exchange: Some("X25519+ML-KEM-768 (Quantum-Secure)".to_string()),
             error: None,
         };
