@@ -103,7 +103,7 @@ pqready -t 30 https://example.com
 
 ### Command Line Options
 
-```
+```bash
 pqready [OPTIONS] <URL>
 
 Arguments:
