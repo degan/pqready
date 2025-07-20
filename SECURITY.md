@@ -38,6 +38,7 @@ This tool performs network connections and TLS analysis. Please be aware:
 ## Scope
 
 Security reports should focus on:
+
 - Remote code execution vulnerabilities
 - Memory safety issues
 - Cryptographic implementation flaws
@@ -45,8 +46,9 @@ Security reports should focus on:
 - Privilege escalation
 
 Out of scope:
+
 - Denial of service via resource exhaustion
 - Issues requiring physical access to the machine
 - Social engineering attacks
 
-Thank you for helping keep pqready secure! 
+Thank you for helping keep pqready secure!

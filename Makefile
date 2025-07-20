@@ -61,6 +61,26 @@ fmt-check:
 	@echo "🎨 Checking code formatting..."
 	cargo fmt -- --check
 
+.PHONY: fmt-md
+fmt-md:
+	@echo "📝 Formatting markdown files..."
+	@which prettier > /dev/null 2>&1 || { echo "Installing prettier..."; npm install -g prettier; }
+	prettier --write "*.md" "**/*.md" --ignore-path .gitignore
+
+.PHONY: fmt-md-check
+fmt-md-check:
+	@echo "📝 Checking markdown formatting..."
+	@which prettier > /dev/null 2>&1 || { echo "Installing prettier..."; npm install -g prettier; }
+	prettier --check "*.md" "**/*.md" --ignore-path .gitignore
+
+.PHONY: fmt-all
+fmt-all: fmt fmt-md
+	@echo "✅ All formatting complete!"
+
+.PHONY: fmt-all-check
+fmt-all-check: fmt-check fmt-md-check
+	@echo "✅ All formatting checks complete!"
+
 # Run targets
 .PHONY: run
 run:
@@ -169,10 +189,10 @@ publish-dirty: ci publish-check-dirty
 
 # Development workflow
 .PHONY: dev
-dev: fmt clippy-all test audit build
+dev: fmt fmt-md clippy-all test audit build
 
 .PHONY: ci
-ci: fmt-check clippy-all test audit build
+ci: fmt-check fmt-md-check clippy-all test audit build
 
 .PHONY: security
 security: audit
@@ -218,6 +238,10 @@ help:
 	@echo "  clippy-all    Run clippy linter (all targets and features)"
 	@echo "  fmt           Format code"
 	@echo "  fmt-check     Check code formatting"
+	@echo "  fmt-md        Format markdown files"
+	@echo "  fmt-md-check  Check markdown formatting"
+	@echo "  fmt-all       Format both code and markdown"
+	@echo "  fmt-all-check Check both code and markdown formatting"
 	@echo "  run           Run with example URL"
 	@echo "  run-verbose   Run with verbose output"
 	@echo "  run-json      Run with JSON output"
@@ -246,6 +270,7 @@ help:
 	@echo "Examples:"
 	@echo "  make build                    # Build debug version"
 	@echo "  make release                  # Build release version"
+	@echo "  make fmt-md                   # Format all markdown files"
 	@echo "  make demo                     # Run demo"
 	@echo "  make demo-deep                # Run deep analysis demo"
 	@echo "  make dev                      # Full development check"

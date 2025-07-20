@@ -7,25 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed 
+### Changed
+
 - Updated TLS version and cipher suite output to be human readable
 - Emoji selecting due to spacing
 
 ## [0.1.1] - 2025-06-26
 
 ### Added
+
 - --no-color option and terminal detection
 - Version to output
 
-### Fixed  
+### Fixed
+
 - Spacing and output inconsitencies
 
 ### Changed
+
 - Update clippy make command for thoroughness
 
 ## [0.1.0] - 2025-06-20
 
 ### Added
+
 - Initial release of pqready
 - Deep TLS handshake analysis for quantum-secure encryption detection
 - Support for X25519MLKEM768 and X25519Kyber768Draft key exchange detection
@@ -36,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for core functionality
 
 ### Features
+
 - **Deep Analysis Mode**: Low-level TLS handshake inspection (default)
 - **Regular Analysis Mode**: High-level library-based analysis
 - **JSON Output**: Machine-readable results for integration
@@ -44,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Color-coded Output**: Easy-to-read results with visual indicators
 
 ### Technical Details
+
 - Built with Rust for performance and safety
 - Async/await support for non-blocking operations
 - Custom TLS handshake parser for deep analysis
@@ -52,4 +59,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - X25519+Kyber768-Draft00 (0x6399)
 - Fallback to classical algorithms when quantum-secure ones unavailable
 
-[0.1.0]: https://github.com/degan/pqready/releases/tag/v0.1.0 
+[0.1.0]: https://github.com/degan/pqready/releases/tag/v0.1.0

@@ -23,9 +23,11 @@ Based on Apple's quantum-secure encryption specifications from [iOS 26, iPadOS 2
 Download the latest release for your platform from [GitHub Releases](https://github.com/degan/pqready/releases):
 
 #### macOS
+
 1. Download `pqready` from the [releases page](https://github.com/degan/pqready/releases)
 2. Open Terminal and navigate to your Downloads folder
 3. Remove quarantine and run/install:
+
 ```bash
 # Remove macOS quarantine (required for unsigned binaries)
 chmod +x pqready
@@ -36,9 +38,11 @@ sudo mv pqready /usr/local/bin/pqready
 ```
 
 #### Linux
-1. Download `pqready` from the [releases page](https://github.com/degan/pqready/releases)  
+
+1. Download `pqready` from the [releases page](https://github.com/degan/pqready/releases)
 2. Open a terminal and navigate to your downloads folder
 3. Make executable and run/install:
+
 ```bash
 # install
 chmod +x pqready
@@ -48,6 +52,7 @@ sudo mv pqready /usr/local/bin/
 ```
 
 #### Windows
+
 Download `pqready.exe` from the [releases page](https://github.com/degan/pqready/releases) and (OPTIONAL) add it to your PATH.
 
 ### Install from Cargo
@@ -118,6 +123,7 @@ Options:
 ### Examples
 
 #### Basic Test
+
 ```bash
 $ pqready https://google.com
 
@@ -127,6 +133,7 @@ Quantum-secure encryption: ✅ SUPPORTED
 ```
 
 #### Verbose Output
+
 ```bash
 $ pqready -v https://example.com
 
@@ -169,6 +176,7 @@ Key Exchange: X25519 (Classical)
 ```
 
 #### JSON Output
+
 ```bash
 $ pqready -j https://example.com
 {
@@ -183,6 +191,7 @@ $ pqready -j https://example.com
 ```
 
 #### Windows Example
+
 ```cmd
 # Download pqready.exe and run from command prompt
 C:\Downloads> pqready.exe example.com
@@ -202,6 +211,7 @@ This tool tests for the `X25519MLKEM768` key exchange algorithm, which is a hybr
 - **ML-KEM-768**: Post-quantum key encapsulation mechanism
 
 This hybrid approach provides:
+
 - **Current security**: Protection against classical computers
 - **Future security**: Protection against quantum computers
 - **Compatibility**: Fallback to classical algorithms when quantum-secure ones aren't supported
@@ -209,7 +219,7 @@ This hybrid approach provides:
 ### Supported Platforms
 
 - **Windows**: Windows 10 and later
-- **macOS**: macOS 10.15 and later  
+- **macOS**: macOS 10.15 and later
 - **Linux**: Most modern distributions
 
 ### Limitations
@@ -284,6 +294,7 @@ cargo fmt               # Formatting
 Follow this workflow to create a new release:
 
 #### 1. Prepare the Release
+
 ```bash
 # Update version in Cargo.toml
 # Example: version = "0.1.1" or "0.2.0"
@@ -292,18 +303,20 @@ Follow this workflow to create a new release:
 ## [0.1.1] - 2025-01-15
 ### Added
 - New feature descriptions
-### Fixed  
+### Fixed
 - Bug fix descriptions
 ### Changed
 - Breaking change descriptions (for major versions)
 ```
 
 #### 2. Test Everything Locally
+
 ```bash
-make dev 
+make dev
 ```
 
 #### 3. Commit and Push Changes
+
 ```bash
 git add -A
 git commit -m "Bump version to 0.1.1"
@@ -311,19 +324,23 @@ git push
 ```
 
 #### 4. Create and Push Tag
+
 ```bash
 git tag v0.1.1
 git push origin v0.1.1
 ```
 
 #### 5. Automatic Release Creation
+
 When you push the tag, GitHub Actions will automatically:
+
 - ✅ Build binaries for Windows, macOS, and Linux
 - ✅ Create GitHub release with binaries attached
 - ✅ Use CHANGELOG content as release notes
 - ✅ Run all CI checks
 
 #### 6. Publish to Crates.io (Optional)
+
 ```bash
 # Test publish without actually doing it
 make publish-check
@@ -335,13 +352,15 @@ make publish
 ### Versioning Guidelines
 
 Follow [Semantic Versioning](https://semver.org/):
+
 - **Patch** (0.1.1): Bug fixes, no breaking changes
-- **Minor** (0.2.0): New features, no breaking changes  
+- **Minor** (0.2.0): New features, no breaking changes
 - **Major** (1.0.0): Breaking changes
 
 ### Publishing Targets
 
 Your Makefile includes these publishing commands:
+
 - `make publish-check` - Dry run publish check (requires clean git)
 - `make publish` - Full publish workflow with CI checks and user confirmation
 - `make publish-check-dirty` - Development version allowing uncommitted changes
@@ -370,7 +389,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - Apple Inc. for the quantum-secure encryption specifications, even though as of first release apple.com does not appear to support.
 - The post-quantum cryptography research community
-
 
 ## TODO
 
