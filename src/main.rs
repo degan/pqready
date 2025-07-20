@@ -155,7 +155,7 @@ impl ScanResult {
 async fn main() -> Result<()> {
     let matches = Command::new("pqready")
         .version(env!("CARGO_PKG_VERSION"))
-        .author("Devin Egan <github@devinegan.com")
+        .author("Devin Egan <github@devinegan.com>")
         .about("A cross-platform CLI tool to test for quantum-secure encryption support")
         .long_about("Tests HTTPS servers for quantum-secure encryption support (X25519MLKEM768 key exchange).\n\nBased on Apple's quantum-secure encryption specifications from iOS 26, iPadOS 26, macOS Tahoe 26 and visionOS 26.\n\nDeep TLS handshake analysis is enabled by default for accurate quantum detection. Use --regular for high-level library analysis (limited detection capabilities).")
         .after_help("EXAMPLES:\n    pqready https://example.com\n    pqready -v https://github.com\n    pqready -j https://google.com\n    pqready --regular -v https://cloudflare.com")
