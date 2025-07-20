@@ -216,7 +216,7 @@ async fn main() -> Result<()> {
     let url_str = matches
         .get_one::<String>("url")
         .ok_or_else(|| anyhow!("URL argument is required but not provided"))?;
-    
+
     if url_str.trim().is_empty() {
         return Err(anyhow!("URL cannot be empty"));
     }
@@ -226,14 +226,22 @@ async fn main() -> Result<()> {
     let regular = matches.get_flag("regular");
     let conservative = matches.get_flag("conservative");
     let no_color = matches.get_flag("no-color");
-    
+
     let timeout: u64 = matches
         .get_one::<String>("timeout")
-        .ok_or_else(|| anyhow!("Timeout argument is missing (this should not happen with default value)"))?
+        .ok_or_else(|| {
+            anyhow!("Timeout argument is missing (this should not happen with default value)")
+        })?
         .parse()
-        .map_err(|_| anyhow!("Invalid timeout value '{}': must be a positive number", 
-                            matches.get_one::<String>("timeout").unwrap_or(&String::from("unknown"))))?;
-    
+        .map_err(|_| {
+            anyhow!(
+                "Invalid timeout value '{}': must be a positive number",
+                matches
+                    .get_one::<String>("timeout")
+                    .unwrap_or(&String::from("unknown"))
+            )
+        })?;
+
     // Validate timeout range
     if timeout == 0 {
         return Err(anyhow!("Timeout must be greater than 0 seconds"));
@@ -1093,7 +1101,13 @@ mod tests {
             "Connection timeout".to_string(),
         );
         assert!(timeout_result.error.is_some());
-        assert_eq!(timeout_result.error.as_ref().expect("Expected error to be present"), "Connection timeout");
+        assert_eq!(
+            timeout_result
+                .error
+                .as_ref()
+                .expect("Expected error to be present"),
+            "Connection timeout"
+        );
 
         // Test TLS handshake failure
         let tls_error_result = ScanResult::with_error(
@@ -1230,7 +1244,8 @@ mod tests {
             error: None,
         };
 
-        let json = serde_json::to_string_pretty(&result).expect("Failed to serialize test result to pretty JSON");
+        let json = serde_json::to_string_pretty(&result)
+            .expect("Failed to serialize test result to pretty JSON");
 
         // Verify JSON structure
         assert!(json.contains("\"url\""));
@@ -1254,7 +1269,8 @@ mod tests {
             "Connection refused".to_string(),
         );
 
-        let json = serde_json::to_string(&error_result).expect("Failed to serialize error result to JSON");
+        let json =
+            serde_json::to_string(&error_result).expect("Failed to serialize error result to JSON");
         assert!(json.contains("\"error\":\"Connection refused\""));
         assert!(json.contains("\"supports_quantum\":false"));
     }
