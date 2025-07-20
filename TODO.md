@@ -2,7 +2,7 @@
 
 This document outlines recommended updates and enhancements for the pqready codebase based on a comprehensive code review.
 
-## 🔥 Critical/High Priority
+## 🔥 Critical Priority
 
 ### 1. Fix Author Information
 - [x] ~~Replace placeholder author in CLI help text~~
@@ -17,9 +17,9 @@ This document outlines recommended updates and enhancements for the pqready code
 ### 3. Code Quality - Reduce `unwrap()` Usage
 - [x] Replace `unwrap()` in main execution path (line 214, 222)
 - [x] Add proper error handling for CLI argument parsing
-- [ ] Review remaining test `unwrap()` calls for potential improvements
+- [x] Review remaining test `unwrap()` calls for potential improvements
 
-## 🟡 Medium Priority
+## 🟡 High Priority
 
 ### 4. Performance Optimizations
 - [ ] Add binary size optimization flags to release build
@@ -40,7 +40,7 @@ This document outlines recommended updates and enhancements for the pqready code
 - [ ] Standardize TLS protocol constants
 - [ ] Document cryptographic constants with their sources
 
-## 🟢 Nice-to-Have Features
+## 🟢 Medium Priority
 
 ### 7. Batch Processing
 - [ ] Implement file-based URL input (mentioned in README TODO)
@@ -60,75 +60,75 @@ This document outlines recommended updates and enhancements for the pqready code
 - [ ] Add detailed timing information in verbose mode
 - [ ] Support custom output templates
 
-## 🧪 Testing & Quality
+### 10. Testing & Quality
 
-### 10. Test Coverage Expansion
+#### Test Coverage Expansion
 - [ ] Add integration tests with real server connections
 - [ ] Implement property-based tests using `proptest`
 - [ ] Add benchmark tests for performance regression detection
 - [ ] Create tests for edge cases in TLS parsing
 
-### 11. Code Coverage & Analysis
+#### Code Coverage & Analysis
 - [ ] Add `cargo tarpaulin` for coverage reporting
 - [ ] Set up coverage thresholds in CI
 - [ ] Add `cargo machete` for unused dependency detection
 - [ ] Implement `cargo deny` for license/security checking
 
-### 12. Fuzzing & Security
+#### Fuzzing & Security
 - [ ] Add fuzzing tests for TLS message parser
 - [ ] Security audit of custom TLS implementation
 - [ ] Add property tests for cryptographic functions
 - [ ] Memory safety analysis with `cargo miri`
 
-## 📚 Documentation
+### 11. Documentation
 
-### 13. Code Documentation
+#### Code Documentation
 - [ ] Add inline examples to public functions
 - [ ] Document complex TLS parsing logic
 - [ ] Add architecture decision records (ADRs)
 - [ ] Create developer guide for contributors
 
-### 14. User Documentation
+#### User Documentation
 - [ ] Add troubleshooting section for common issues
 - [ ] Create examples for different use cases
 - [ ] Document compatibility matrix for TLS servers
 - [ ] Add performance tuning guide
 
-## 🔧 Development Workflow
+### 12. Development Workflow
 
-### 15. Makefile Enhancements
+#### Makefile Enhancements
 - [ ] Add `make coverage` target with `cargo tarpaulin`
 - [ ] Implement `make deps-check` with dependency analysis
 - [ ] Add `make security-audit` comprehensive security check
 - [ ] Create `make profile` for performance profiling
 
-### 16. CI/CD Improvements
+#### CI/CD Improvements
 - [ ] Add cross-compilation tests for all platforms
 - [ ] Implement automated security scanning
 - [ ] Add performance regression detection
 - [ ] Set up automated dependency updates
 
-### 17. Release Process
+#### Release Process
 - [ ] Automate changelog generation
 - [ ] Add pre-release testing checklist
 - [ ] Implement semantic versioning validation
 - [ ] Create release notes templates
 
-## 🚀 Future Enhancements
+## 🚀 Low Priority (Future Enhancements)
 
-### 18. Advanced Features
+### 13. Advanced Features
 - [ ] Plugin system for custom analysis
 - [ ] WebUI for result visualization
 - [ ] REST API mode for integration
 - [ ] Database storage for historical results
 
-### 19. Protocol Extensions
+### 14. Protocol Extensions
 - [ ] Support for additional quantum-secure algorithms
 - [ ] Certificate chain analysis
 - [ ] OCSP stapling verification
 - [ ] DNS-over-HTTPS support for resolution
 
-### 20. Monitoring & Observability
+### 15. Monitoring & Observability
 - [ ] Add structured logging with `tracing`
 - [ ] Implement metrics collection
 - [ ] Add health check endpoints
@@ -145,8 +145,8 @@ This document outlines recommended updates and enhancements for the pqready code
 4. **Low** (🚀): Future enhancements, advanced features
 
 **Effort Estimation:**
-- Items marked with checkboxes (- [ ]) are actionable
-- Completed items marked with (- [x]) and ✅
+- Items marked with checkboxes `- [ ]` are actionable
+- Completed items marked with `- [x]` 
 - Consider tackling 2-3 items per release cycle
 - Focus on high-impact, low-effort improvements first
 
