@@ -5,18 +5,18 @@ This document outlines recommended updates and enhancements for the pqready code
 ## 🔥 Critical/High Priority
 
 ### 1. Fix Author Information
-- [x] ~~Replace placeholder author in CLI help text~~ ✅ **COMPLETED**
-- [ ] Verify email format is valid (missing closing `>`) ✅ **COMPLETED** 
+- [x] ~~Replace placeholder author in CLI help text~~
+- [x] Verify email format is valid (missing closing `>`)
 
 ### 2. Dependency Updates
-- [ ] Run `cargo update` to get latest compatible versions
+- [x] Run `cargo update` to get latest compatible versions
 - [ ] Review and update dependencies for security patches
 - [ ] Consider updating major versions where appropriate
 - [ ] Add `cargo-outdated` to development workflow
 
 ### 3. Code Quality - Reduce `unwrap()` Usage
-- [ ] Replace `unwrap()` in main execution path (line 214, 222)
-- [ ] Add proper error handling for CLI argument parsing
+- [x] Replace `unwrap()` in main execution path (line 214, 222)
+- [x] Add proper error handling for CLI argument parsing
 - [ ] Review remaining test `unwrap()` calls for potential improvements
 
 ## 🟡 Medium Priority

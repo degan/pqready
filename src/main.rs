@@ -209,19 +209,38 @@ async fn main() -> Result<()> {
                 .help("Disable color and emoji output")
                 .action(clap::ArgAction::SetTrue),
         )
-        .get_matches();
+        .try_get_matches()
+        .map_err(|e| anyhow!("CLI argument parsing failed: {}", e))?;
 
-    let url_str = matches.get_one::<String>("url").unwrap();
+    // Parse and validate arguments with comprehensive error handling
+    let url_str = matches
+        .get_one::<String>("url")
+        .ok_or_else(|| anyhow!("URL argument is required but not provided"))?;
+    
+    if url_str.trim().is_empty() {
+        return Err(anyhow!("URL cannot be empty"));
+    }
+
     let verbose = matches.get_flag("verbose");
     let json_output = matches.get_flag("json");
     let regular = matches.get_flag("regular");
     let conservative = matches.get_flag("conservative");
     let no_color = matches.get_flag("no-color");
+    
     let timeout: u64 = matches
         .get_one::<String>("timeout")
-        .unwrap()
+        .ok_or_else(|| anyhow!("Timeout argument is missing (this should not happen with default value)"))?
         .parse()
-        .map_err(|_| anyhow!("Invalid timeout value"))?;
+        .map_err(|_| anyhow!("Invalid timeout value '{}': must be a positive number", 
+                            matches.get_one::<String>("timeout").unwrap_or(&String::from("unknown"))))?;
+    
+    // Validate timeout range
+    if timeout == 0 {
+        return Err(anyhow!("Timeout must be greater than 0 seconds"));
+    }
+    if timeout > 300 {
+        return Err(anyhow!("Timeout cannot exceed 300 seconds (5 minutes)"));
+    }
 
     // Initialize color configuration
     let color_config = ColorConfig::new(no_color);
@@ -915,7 +934,7 @@ mod tests {
             error: None,
         };
 
-        let json = serde_json::to_string(&result).unwrap();
+        let json = serde_json::to_string(&result).expect("Failed to serialize test result to JSON");
         assert!(json.contains("\"supports_quantum\":true"));
         assert!(json.contains("\"url\":\"https://test.com\""));
         assert!(json.contains("\"version\":\"0.1.0\""));
@@ -1074,7 +1093,7 @@ mod tests {
             "Connection timeout".to_string(),
         );
         assert!(timeout_result.error.is_some());
-        assert_eq!(timeout_result.error.unwrap(), "Connection timeout");
+        assert_eq!(timeout_result.error.as_ref().expect("Expected error to be present"), "Connection timeout");
 
         // Test TLS handshake failure
         let tls_error_result = ScanResult::with_error(
@@ -1211,7 +1230,7 @@ mod tests {
             error: None,
         };
 
-        let json = serde_json::to_string_pretty(&result).unwrap();
+        let json = serde_json::to_string_pretty(&result).expect("Failed to serialize test result to pretty JSON");
 
         // Verify JSON structure
         assert!(json.contains("\"url\""));
@@ -1235,7 +1254,7 @@ mod tests {
             "Connection refused".to_string(),
         );
 
-        let json = serde_json::to_string(&error_result).unwrap();
+        let json = serde_json::to_string(&error_result).expect("Failed to serialize error result to JSON");
         assert!(json.contains("\"error\":\"Connection refused\""));
         assert!(json.contains("\"supports_quantum\":false"));
     }
