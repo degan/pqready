@@ -5,12 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.2]
 
 ### Changed
 
 - Updated TLS version and cipher suite output to be human readable
 - Emoji selecting due to spacing
+- Extracted magic numbers to named constants in tls_inspector.rs
+- Updated dependencies: clap 4.5, tokio 1.43, colored 2.2, base64 0.22
+
+### Removed
+
+- Removed unused `reqwest` dependency
+
+### Performance
+
+- Added release profile optimizations (strip, LTO, size optimization, single codegen unit)
 
 ## [0.1.1] - 2025-06-26
 
@@ -59,4 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - X25519+Kyber768-Draft00 (0x6399)
 - Fallback to classical algorithms when quantum-secure ones unavailable
 
+[Unreleased]: https://github.com/degan/pqready/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/degan/pqready/releases/tag/v0.1.1
 [0.1.0]: https://github.com/degan/pqready/releases/tag/v0.1.0

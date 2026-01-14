@@ -7,26 +7,34 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::time::Duration;
 
-// TLS Constants
+// Buffer and timeout constants
+const READ_BUFFER_SIZE: usize = 4096;
+const DEFAULT_STREAM_TIMEOUT_SECS: u64 = 10;
+
+// TLS Record Types (RFC 8446 Section 5.1)
 const TLS_HANDSHAKE: u8 = 0x16;
 const TLS_CHANGE_CIPHER_SPEC: u8 = 0x14;
 const TLS_ALERT: u8 = 0x15;
 const TLS_APPLICATION_DATA: u8 = 0x17;
+
+// TLS Protocol Versions (RFC 8446)
 const TLS_VERSION_1_3: u16 = 0x0304;
 const TLS_VERSION_1_2: u16 = 0x0303;
 
-// Handshake Types
+// Handshake Message Types (RFC 8446 Section 4)
 const CLIENT_HELLO: u8 = 0x01;
 const SERVER_HELLO: u8 = 0x02;
 
-// Extension Types
+// TLS Extension Types (IANA TLS ExtensionType Values)
 const SUPPORTED_GROUPS: u16 = 0x000a;
 const KEY_SHARE: u16 = 0x0033;
 const SUPPORTED_VERSIONS: u16 = 0x002b;
 
-// Named Groups (for supported_groups extension)
+// Named Groups / Supported Groups (IANA TLS Supported Groups)
+// Classical ECDH groups
 const X25519: u16 = 0x001d;
-const X25519_MLKEM768: u16 = 0x11ec; // X25519+ML-KEM-768 (recommended by Cloudflare)
+// Post-quantum hybrid groups
+const X25519_MLKEM768: u16 = 0x11ec; // X25519+ML-KEM-768 (IETF draft, Cloudflare recommended)
 const X25519_KYBER768_DRAFT: u16 = 0x6399; // X25519Kyber768Draft00 (current Cloudflare implementation)
 
 #[derive(Debug, Clone, Default)]
@@ -47,9 +55,9 @@ pub struct TlsInspector {
 
 impl TlsInspector {
     pub fn new(stream: TcpStream) -> Result<Self> {
-        // Set read timeout
-        stream.set_read_timeout(Some(Duration::from_secs(10)))?;
-        stream.set_write_timeout(Some(Duration::from_secs(10)))?;
+        // Set read/write timeouts
+        stream.set_read_timeout(Some(Duration::from_secs(DEFAULT_STREAM_TIMEOUT_SECS)))?;
+        stream.set_write_timeout(Some(Duration::from_secs(DEFAULT_STREAM_TIMEOUT_SECS)))?;
 
         Ok(Self {
             stream,
@@ -309,7 +317,7 @@ impl TlsInspector {
             );
         }
 
-        let mut buffer = vec![0u8; 4096];
+        let mut buffer = vec![0u8; READ_BUFFER_SIZE];
         let bytes_read = self.stream.read(&mut buffer)?;
 
         if verbose {

@@ -12,8 +12,9 @@ This document outlines recommended updates and enhancements for the pqready code
 ### 2. Dependency Updates
 
 - [x] Run `cargo update` to get latest compatible versions
-- [ ] Review and update dependencies for security patches
-- [ ] Consider updating major versions where appropriate
+- [x] Review and update dependencies for security patches
+- [x] Consider updating major versions where appropriate
+- [x] Removed unused `reqwest` dependency
 - [ ] Add `cargo-outdated` to development workflow
 
 ### 3. Code Quality - Reduce `unwrap()` Usage
@@ -26,9 +27,10 @@ This document outlines recommended updates and enhancements for the pqready code
 
 ### 4. Performance Optimizations
 
-- [ ] Add binary size optimization flags to release build
-  - [ ] Add `strip = true` to `Cargo.toml` profile.release
-  - [ ] Consider `opt-level = "z"` for size optimization
+- [x] Add binary size optimization flags to release build
+  - [x] Add `strip = true` to `Cargo.toml` profile.release
+  - [x] Consider `opt-level = "z"` for size optimization
+  - [x] Add LTO and single codegen unit for optimal size
 - [ ] Add connection pooling for future batch operations
 - [ ] Profile memory usage during large handshake analysis
 
@@ -41,10 +43,10 @@ This document outlines recommended updates and enhancements for the pqready code
 
 ### 6. Extract Magic Numbers
 
-- [ ] Define constants for buffer sizes in `tls_inspector.rs`
-- [ ] Create constants for timeout durations
-- [ ] Standardize TLS protocol constants
-- [ ] Document cryptographic constants with their sources
+- [x] Define constants for buffer sizes in `tls_inspector.rs`
+- [x] Create constants for timeout durations
+- [x] Standardize TLS protocol constants
+- [x] Document cryptographic constants with their sources
 
 ## 🟢 Medium Priority
 
@@ -153,6 +155,26 @@ This document outlines recommended updates and enhancements for the pqready code
 - [ ] Implement metrics collection
 - [ ] Add health check endpoints
 - [ ] Support for OpenTelemetry integration
+
+## 🚀 Future Enhancements
+
+### 16. Configuration File
+
+- [ ] Add support for a configuration file (e.g., `pqready.toml`)
+- [ ] Allow users to set default options in the configuration file
+- [ ] Manage lists of URLs to scan in the configuration file
+
+### 17. Interactive Mode
+
+- [ ] Add an interactive mode to scan URLs one by one
+
+### 18. HTML Output
+
+- [ ] Add an option to output the results as an HTML report
+
+### 19. SOCKS5 Proxy Support
+
+- [ ] Add support for using a SOCKS5 proxy
 
 ---
 
