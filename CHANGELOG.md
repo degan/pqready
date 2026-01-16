@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.2]
 
-### Changed
+### Changed (0.1.2)
 
 - Updated TLS version and cipher suite output to be human readable
 - Emoji selecting due to spacing
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.1] - 2025-06-26
 
-### Added
+### Added (0.1.1)
 
 - --no-color option and terminal detection
 - Version to output
@@ -69,6 +69,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - X25519+Kyber768-Draft00 (0x6399)
 - Fallback to classical algorithms when quantum-secure ones unavailable
 
-[Unreleased]: https://github.com/degan/pqready/compare/v0.1.1...HEAD
 [0.1.1]: https://github.com/degan/pqready/releases/tag/v0.1.1
 [0.1.0]: https://github.com/degan/pqready/releases/tag/v0.1.0
