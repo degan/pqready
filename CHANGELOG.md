@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Emoji selecting due to spacing
 - Extracted magic numbers to named constants in tls_inspector.rs
 - Updated dependencies: clap 4.5, tokio 1.43, colored 2.2, base64 0.22
+- Update cargo-audit 22.0
 
 ### Removed
 

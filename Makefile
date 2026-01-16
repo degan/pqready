@@ -131,9 +131,10 @@ audit:
 
 .PHONY: audit-fix
 audit-fix:
-	@echo "🔧 Auditing and fixing dependencies..."
+	@echo "🔧 Auditing dependencies and updating to fix vulnerabilities..."
 	@which cargo-audit > /dev/null 2>&1 || { echo "Installing cargo-audit..."; cargo install cargo-audit --locked; }
-	cargo audit fix --ignore yanked
+	cargo update
+	cargo audit --ignore yanked
 
 # Documentation targets
 .PHONY: doc
